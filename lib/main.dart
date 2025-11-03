@@ -1,0 +1,75 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ravello/pages/splash_screen.dart';
+import 'package:ravello/pages/login_page.dart';
+import 'package:ravello/pages/register_page.dart';
+import 'package:ravello/pages/home_page.dart';
+import 'package:ravello/pages/cart_page.dart';
+import 'package:ravello/pages/onboarding.dart';
+import 'package:ravello/pages/checkout_page.dart'; // ✅ Tambahkan import ini
+import 'package:ravello/providers/cart_provider.dart';
+
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
+      child: const RavelloApp(),
+    ),
+  );
+}
+
+class RavelloApp extends StatelessWidget {
+  const RavelloApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Ravello E-Commerce',
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF124170)),
+        useMaterial3: true,
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      home: const SplashScreenWrapper(),
+      routes: {
+        '/onboarding': (context) => const OnboardingPage(),
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/home': (context) => const HomePage(),
+        '/cart': (context) => const CartPage(),
+        '/checkout': (context) => const CheckoutPage(), // ✅ route baru
+      },
+    );
+  }
+}
+
+class SplashScreenWrapper extends StatefulWidget {
+  const SplashScreenWrapper({super.key});
+
+  @override
+  State<SplashScreenWrapper> createState() => _SplashScreenWrapperState();
+}
+
+class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    _navigateToOnboarding();
+  }
+
+  Future<void> _navigateToOnboarding() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    Navigator.pushReplacementNamed(context, '/onboarding');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SplashScreen();
+  }
+}
