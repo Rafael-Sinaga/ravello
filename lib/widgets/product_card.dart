@@ -1,6 +1,8 @@
 // lib/widgets/product_card.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/product_model.dart';
+import '../providers/cart_provider.dart';
 import '../pages/detail_product.dart';
 
 class ProductCard extends StatelessWidget {
@@ -10,9 +12,10 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
     final hasDiscount = product.discount != null && product.discount! > 0;
     final discountedPrice = hasDiscount
-        ? product.price - (product.price * product.discount! / 100)
+        ? product.price - (product.price * (product.discount! / 100))
         : product.price;
 
     return GestureDetector(
@@ -25,126 +28,143 @@ class ProductCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 140,
-        height: 190,
-        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+        width: 160,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF124170).withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.grey.withOpacity(0.2),
               blurRadius: 4,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 3),
             ),
           ],
+          border: Border.all(
+            color: const Color(0xFFE0E0E0),
+            width: 1,
+          ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Stack(
-              alignment: Alignment.topRight,
-              children: [
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      product.imagePath,
-                      height: 70,
-                      width: 70,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox(
-                        height: 70,
-                        width: 70,
-                        child: Icon(Icons.broken_image,
-                            size: 36, color: Colors.grey),
-                      ),
+            // Gambar produk
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Image.asset(
+                product.imagePath,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 120,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  );
+                },
+              ),
+            ),
+
+            // Detail produk
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF124170),
                     ),
                   ),
-                ),
-                if (hasDiscount)
-                  Positioned(
-                    top: 0,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade400),
+                  const SizedBox(height: 4),
+                  if (hasDiscount)
+                    Row(
+                      children: [
+                        Text(
+                          'Rp ${product.price.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: Colors.grey,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '-${product.discount!.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  Text(
+                    'Rp ${discountedPrice.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF124170),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        cart.addToCart(product);
+
+                        // 🔹 Pop-up notifikasi (SnackBar)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${product.name} berhasil ditambahkan ke keranjang',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF124170),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF124170)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 8),
                       ),
-                      child: Text(
-                        '${product.discount!.toStringAsFixed(0)}% off',
-                        style: const TextStyle(
-                          fontSize: 9,
+                      icon: const Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 14,
+                        color: Color(0xFF124170),
+                      ),
+                      label: const Text(
+                        'Tambah',
+                        style: TextStyle(
+                          fontSize: 11,
                           fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF124170),
                         ),
                       ),
                     ),
                   ),
-              ],
-            ),
-
-            const SizedBox(height: 6),
-
-            // Nama produk
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: Text(
-                product.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            // Harga
-            Padding(
-              padding: const EdgeInsets.only(top: 1, bottom: 3),
-              child: Text(
-                'Rp ${discountedPrice.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF124170),
-                ),
-              ),
-            ),
-
-            // Tombol Tambah
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 25),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  side: const BorderSide(color: Color(0xFF124170)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                icon: const Icon(Icons.shopping_bag_outlined,
-                    size: 13, color: Color(0xFF124170)),
-                label: const Text(
-                  'Tambah',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10,
-                    color: Color(0xFF124170),
-                  ),
-                ),
+                ],
               ),
             ),
           ],

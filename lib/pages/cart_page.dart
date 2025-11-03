@@ -10,17 +10,17 @@ class CartPage extends StatelessWidget {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFB0C0CF), // Warna utama
+      backgroundColor: const Color(0xFFF8FDFA), // 🔹 Warna dasar background
       appBar: AppBar(
-        backgroundColor: const Color(0xFF124170), // Warna sekunder
+        backgroundColor: const Color(0xFFF8FDFA), // 🔹 Putih sesuai tema
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF124170)), // 🔹 Ikon biru
         title: const Text(
           'Keranjang',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Color(0xFF124170), // 🔹 Font biru
           ),
         ),
         centerTitle: true,
@@ -31,11 +31,12 @@ class CartPage extends StatelessWidget {
             child: cart.items.isEmpty
                 ? const Center(
                     child: Text(
-                      'Keranjang kamu masih kosong 😔',
+                      'Keranjang kamu masih kosong',
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 16,
-                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF124170),
                       ),
                     ),
                   )
@@ -47,13 +48,17 @@ class CartPage extends StatelessWidget {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: const Color(0xFFF8FDFA),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF124170),
+                            width: 1.2,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              offset: const Offset(0, 3),
-                              blurRadius: 8,
+                              color: Colors.grey.withOpacity(0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
@@ -67,7 +72,11 @@ class CartPage extends StatelessWidget {
                               height: 60,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.broken_image, size: 40, color: Colors.grey);
+                                return const Icon(
+                                  Icons.broken_image,
+                                  size: 40,
+                                  color: Colors.grey,
+                                );
                               },
                             ),
                           ),
@@ -75,22 +84,25 @@ class CartPage extends StatelessWidget {
                             product.name,
                             style: const TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Color(0xFF124170),
                             ),
                           ),
                           subtitle: Text(
                             'Rp ${product.price}',
                             style: const TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 14,
-                              color: Color(0xFF124170),
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
+                              color: Color(0xFF124170),
                             ),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.redAccent,
+                            ),
                             onPressed: () => cart.removeItem(product),
                           ),
                         ),
@@ -101,15 +113,11 @@ class CartPage extends StatelessWidget {
           if (cart.items.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    offset: const Offset(0, -2),
-                    blurRadius: 8,
-                  ),
-                ],
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FDFA),
+                border: Border(
+                  top: BorderSide(color: Color(0xFF124170), width: 1),
+                ),
               ),
               child: SafeArea(
                 top: false,
@@ -122,7 +130,7 @@ class CartPage extends StatelessWidget {
                         fontFamily: 'Poppins',
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: Color(0xFF124170),
                       ),
                     ),
                     ElevatedButton(
@@ -131,7 +139,7 @@ class CartPage extends StatelessWidget {
                           const SnackBar(
                             backgroundColor: Color(0xFF124170),
                             content: Text(
-                              'Checkout berhasil! 🎉',
+                              'Checkout berhasil!',
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.white,
@@ -146,7 +154,8 @@ class CartPage extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       child: const Text(
                         'Checkout',

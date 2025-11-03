@@ -384,6 +384,22 @@ class _HomePageState extends State<HomePage> {
                                     child: OutlinedButton.icon(
                                       onPressed: () {
                                         cart.addToCart(product);
+                                        Future.delayed(Duration.zero, () {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${product.name} berhasil ditambahkan ke keranjang',
+                                                style: const TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              backgroundColor: const Color(0xFF124170),
+                                              behavior: SnackBarBehavior.floating,
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        });
                                       },
                                       style: OutlinedButton.styleFrom(
                                         side: const BorderSide(
