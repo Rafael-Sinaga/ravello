@@ -79,6 +79,7 @@ class DetailProduct extends StatelessWidget {
                             width: double.infinity,
                             height: 300,
                             fit: BoxFit.cover,
+                            filterQuality: FilterQuality.high,
                             errorBuilder: (context, error, stackTrace) {
                               return const SizedBox(
                                 height: 300,
