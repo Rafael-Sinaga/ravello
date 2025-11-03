@@ -542,7 +542,3 @@ class _HomePageState extends State<HomePage> {
     return buffer.toString().split('').reversed.join('');
   }
 }
-
-
-test 123
-// pepek niki nicole
