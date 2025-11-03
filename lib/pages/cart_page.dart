@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import 'checkout_page.dart'; // 🔹 Tambahkan import ke halaman checkout
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
@@ -135,19 +136,30 @@ class CartPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
+                        // 🔹 Tampilkan notifikasi terlebih dahulu
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Color(0xFF124170),
                             content: Text(
-                              'Checkout berhasil!',
+                              'Melanjutkan ke halaman Checkout...',
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.white,
                               ),
                             ),
+                            duration: Duration(seconds: 1),
                           ),
                         );
-                        cart.clearCart();
+
+                        // 🔹 Navigasi ke halaman checkout setelah sedikit delay
+                        Future.delayed(const Duration(milliseconds: 800), () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CheckoutPage(),
+                            ),
+                          );
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF124170),
@@ -155,7 +167,9 @@ class CartPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                       child: const Text(
                         'Checkout',
