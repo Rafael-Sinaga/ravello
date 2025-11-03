@@ -25,46 +25,53 @@ class ProductCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 160,
-        height: 220,
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        width: 140,
+        height: 190,
+        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFF124170).withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Stack(
               alignment: Alignment.topRight,
               children: [
-                // 🔹 Gambar di tengah
                 Center(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.asset(
                       product.imagePath,
-                      height: 80,
-                      width: 80,
+                      height: 70,
+                      width: 70,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const SizedBox(
-                        height: 80,
-                        width: 80,
-                        child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox(
+                        height: 70,
+                        width: 70,
+                        child: Icon(Icons.broken_image,
+                            size: 36, color: Colors.grey),
                       ),
                     ),
                   ),
                 ),
-
-                // 🔹 Badge Diskon
                 if (hasDiscount)
                   Positioned(
                     top: 0,
-                    right: 8,
+                    right: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(20),
@@ -73,7 +80,7 @@ class ProductCard extends StatelessWidget {
                       child: Text(
                         '${product.discount!.toStringAsFixed(0)}% off',
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w500,
                         ),
@@ -83,11 +90,11 @@ class ProductCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            // 🔹 Nama produk
+            // Nama produk
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 5),
               child: Text(
                 product.name,
                 maxLines: 1,
@@ -95,46 +102,46 @@ class ProductCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
 
-            // 🔹 Harga
+            // Harga
             Padding(
-              padding: const EdgeInsets.only(top: 2, bottom: 4),
+              padding: const EdgeInsets.only(top: 1, bottom: 3),
               child: Text(
                 'Rp ${discountedPrice.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF124170),
                 ),
               ),
             ),
 
-            // 🔹 Tombol Tambah
+            // Tombol Tambah
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: OutlinedButton.icon(
                 onPressed: () {},
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 28),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(double.infinity, 25),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   side: const BorderSide(color: Color(0xFF124170)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
                 icon: const Icon(Icons.shopping_bag_outlined,
-                    size: 14, color: Color(0xFF124170)),
+                    size: 13, color: Color(0xFF124170)),
                 label: const Text(
                   'Tambah',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Color(0xFF124170),
                   ),
                 ),

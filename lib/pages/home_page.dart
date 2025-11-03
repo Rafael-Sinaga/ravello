@@ -170,7 +170,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 20),
 
-                // KATEGORI (dengan perbaikan spacing)
+                // KATEGORI (scroll horizontal)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -196,28 +196,34 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16), // 🔹 diperlebar dari 12 ke 16
+                const SizedBox(height: 12),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    runSpacing: 20, // 🔹 sebelumnya 16
-                    spacing: 20,    // 🔹 sebelumnya 16
-                    children: [
-                      _buildCategoryCircle(Icons.directions_walk, 'Trail'),
-                      _buildCategoryCircle(Icons.remove_red_eye, 'Kacamata'),
-                      _buildCategoryCircle(Icons.shopping_bag_outlined, 'Busana'),
-                      _buildCategoryCircle(Icons.phone_android, 'Elektronik'),
-                      _buildCategoryCircle(Icons.home_outlined, 'Dekorasi'),
-                      _buildCategoryCircle(Icons.kitchen, 'Perabot'),
-                    ],
+                SizedBox(
+                  height: 100,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        _buildCategoryCircle(Icons.directions_walk, 'Trail'),
+                        _buildCategoryCircle(Icons.remove_red_eye, 'Kacamata'),
+                        _buildCategoryCircle(Icons.shopping_bag_outlined, 'Busana'),
+                        _buildCategoryCircle(Icons.phone_android, 'Elektronik'),
+                        _buildCategoryCircle(Icons.home_outlined, 'Dekorasi'),
+                        _buildCategoryCircle(Icons.kitchen, 'Perabot'),
+                        _buildCategoryCircle(Icons.watch, 'Jam Tangan'),
+                        _buildCategoryCircle(Icons.spa, 'Kecantikan'),
+                        _buildCategoryCircle(Icons.local_florist, 'Dekorasi'),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
                   ),
                 ),
 
-                const SizedBox(height: 30), // 🔹 sebelumnya 24
+                const SizedBox(height: 30),
 
-                // PROMO CAROUSEL (diperbaiki agar tidak dempet kiri)
+                // PROMO CAROUSEL
                 SizedBox(
                   height: 140,
                   child: Padding(
@@ -423,45 +429,48 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategoryCircle(IconData icon, String label) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kategori $label ditekan')),
-        );
-      },
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade300, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: GestureDetector(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Kategori $label ditekan')),
+          );
+        },
+        child: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                color: const Color(0xFF124170),
+                size: 28,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF124170),
-              size: 28,
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.black87,
+                fontFamily: 'Poppins',
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.black87,
-              fontFamily: 'Poppins',
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
