@@ -18,7 +18,7 @@ class DetailProduct extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Bagian atas: tombol back, nama produk, tombol share
+            // Bagian atas
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -68,26 +68,30 @@ class DetailProduct extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Gambar produk dengan indikator
+                    // Gambar produk (fixed: max height + contain)
                     Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            product.imagePath,
-                            width: double.infinity,
-                            height: 300,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const SizedBox(
-                                height: 300,
-                                child: Center(
-                                  child: Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                                ),
-                              );
-                            },
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxHeight: 250, // batasi tinggi maksimal agar tidak terlalu besar
+                            ),
+                            child: Image.asset(
+                              product.imagePath,
+                              width: double.infinity,
+                              fit: BoxFit.contain, // tampilkan gambar utuh tanpa crop
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const SizedBox(
+                                  height: 250,
+                                  child: Center(
+                                    child: Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         Padding(
@@ -185,7 +189,7 @@ class DetailProduct extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    // Deskripsi produk
+                    // Deskripsi
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
