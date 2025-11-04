@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ravello/pages/splash_screen.dart';
@@ -6,7 +7,7 @@ import 'package:ravello/pages/register_page.dart';
 import 'package:ravello/pages/home_page.dart';
 import 'package:ravello/pages/cart_page.dart';
 import 'package:ravello/pages/onboarding.dart';
-import 'package:ravello/pages/checkout_page.dart'; // ✅ Tambahkan import ini
+import 'package:ravello/pages/checkout_page.dart';
 import 'package:ravello/providers/cart_provider.dart';
 
 void main() {
@@ -41,7 +42,8 @@ class RavelloApp extends StatelessWidget {
         '/register': (context) => const RegisterPage(),
         '/home': (context) => const HomePage(),
         '/cart': (context) => const CartPage(),
-        '/checkout': (context) => const CheckoutPage(), // ✅ route baru
+        '/checkout': (context) => const CheckoutPage(),
+        // '/payment': (context) => const PaymentPage(), // <- dihapus
       },
     );
   }

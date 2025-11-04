@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // <--- tambahkan ini
+import 'package:provider/provider.dart';
 import '../models/product_model.dart';
-import '../providers/cart_provider.dart'; // <--- tambahkan ini
+import '../providers/cart_provider.dart';
+import 'checkout_page.dart'; // <--- tambahkan ini
 
 class DetailProduct extends StatelessWidget {
   final Product product;
@@ -77,9 +78,7 @@ class DetailProduct extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxHeight: 250,
-                            ),
+                            constraints: const BoxConstraints(maxHeight: 250),
                             child: Image.asset(
                               product.imagePath,
                               width: double.infinity,
@@ -89,7 +88,8 @@ class DetailProduct extends StatelessWidget {
                                 return const SizedBox(
                                   height: 250,
                                   child: Center(
-                                    child: Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                                    child: Icon(Icons.broken_image,
+                                        size: 100, color: Colors.grey),
                                   ),
                                 );
                               },
@@ -103,12 +103,15 @@ class DetailProduct extends StatelessWidget {
                             children: List.generate(
                               3,
                               (index) => Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 3),
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: index == 0 ? const Color(0xFF124170) : Colors.grey[400],
+                                  color: index == 0
+                                      ? const Color(0xFF124170)
+                                      : Colors.grey[400],
                                 ),
                               ),
                             ),
@@ -155,7 +158,8 @@ class DetailProduct extends StatelessWidget {
                           if (hasDiscount) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade100,
                                 borderRadius: BorderRadius.circular(6),
@@ -221,48 +225,6 @@ class DetailProduct extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    // Pilihan ukuran
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Pilih Ukuran',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: ['S', 'M', 'L', 'XL'].map((size) {
-                              return Container(
-                                margin: const EdgeInsets.only(right: 10),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFF124170)),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  size,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    color: Color(0xFF124170),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -271,7 +233,8 @@ class DetailProduct extends StatelessWidget {
 
             // Tombol bawah
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -288,11 +251,9 @@ class DetailProduct extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Panggil provider
-                        final cart = Provider.of<CartProvider>(context, listen: false);
+                        final cart =
+                            Provider.of<CartProvider>(context, listen: false);
                         cart.addToCart(product);
-
-                        // Tampilkan snackbar
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF124170),
@@ -330,16 +291,25 @@ class DetailProduct extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
-                        // Arahkan ke halaman pembayaran langsung
-                        Navigator.pushNamed(context, '/payment');
+                        final cart =
+                            Provider.of<CartProvider>(context, listen: false);
+                        cart.addToCart(product);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CheckoutPage(),
+                          ),
+                        );
                       },
                       style: OutlinedButton.styleFrom(
                         backgroundColor: const Color(0xFFB0C0CF),
-                        side: const BorderSide(color: Color(0xFF124170), width: 2),
+                        side: const BorderSide(
+                            color: Color(0xFF124170), width: 2),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text(
                         'Checkout',
