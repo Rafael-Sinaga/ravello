@@ -1,10 +1,19 @@
+// lib/pages/checkout_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/checkout_item.dart';
+import '../widgets/payment_method_selector.dart';
 
-class CheckoutPage extends StatelessWidget {
+class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
+
+  @override
+  State<CheckoutPage> createState() => _CheckoutPageState();
+}
+
+class _CheckoutPageState extends State<CheckoutPage> {
+  PaymentMethod _selectedMethod = PaymentMethod.paylater;
 
   @override
   Widget build(BuildContext context) {
@@ -13,12 +22,13 @@ class CheckoutPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Checkout'),
-        backgroundColor: Color(0xFF124170),
+        backgroundColor: const Color(0xFF124170),
       ),
       body: cart.items.isEmpty
           ? const Center(child: Text('Keranjang kosong.'))
           : Column(
               children: [
+                // --- Daftar produk yang dibeli ---
                 Expanded(
                   child: ListView.builder(
                     itemCount: cart.items.length,
@@ -28,8 +38,38 @@ class CheckoutPage extends StatelessWidget {
                     },
                   ),
                 ),
+
+                // --- Pemilihan metode pembayaran ---
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Pilih Metode Pembayaran',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF124170),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      PaymentMethodSelector(
+                        selected: _selectedMethod,
+                        onChanged: (method) {
+                          setState(() => _selectedMethod = method);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // --- Bagian total & tombol konfirmasi ---
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     boxShadow: [
@@ -54,9 +94,26 @@ class CheckoutPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       ElevatedButton(
                         onPressed: () {
+                          String paymentName;
+                          switch (_selectedMethod) {
+                            case PaymentMethod.paylater:
+                              paymentName = 'PayLater';
+                              break;
+                            case PaymentMethod.dana:
+                              paymentName = 'Dana';
+                              break;
+                            case PaymentMethod.cod:
+                              paymentName = 'Bayar di tempat';
+                              break;
+                            case PaymentMethod.ovo:
+                              paymentName = 'OVO';
+                              break;
+                          }
+
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Pesanan berhasil dibuat!'),
+                            SnackBar(
+                              content: Text(
+                                  'Pesanan berhasil dibuat menggunakan $paymentName!'),
                             ),
                           );
                           cart.clearCart();

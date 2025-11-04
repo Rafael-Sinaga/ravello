@@ -29,7 +29,10 @@ flutter:
     - assets/images/Sepatu.png
     - assets/images/Gelang_rajut.png
     - assets/images/Jersey.png
-    - assets/images/Rolex_KW.png
+    - assets/images/Dana.png
+    - assets/images/Paylater.png
+    - assets/images/OVO.png
+    - assets/images/COD.png
 
   fonts:
     - family: Poppins

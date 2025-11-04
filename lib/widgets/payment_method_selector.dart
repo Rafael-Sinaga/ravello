@@ -17,35 +17,59 @@ class PaymentMethodSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color textColor = Color(0xFF124170);
 
+    Widget buildPaymentTile({
+      required PaymentMethod value,
+      required String title,
+      required String assetLogo,
+    }) {
+      return RadioListTile<PaymentMethod>(
+        value: value,
+        groupValue: selected,
+        onChanged: (v) => onChanged(v!),
+        title: Row(
+          children: [
+            Image.asset(
+              assetLogo,
+              width: 35,
+              height: 35,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+        activeColor: const Color(0xFF124170),
+      );
+    }
+
     return Column(
       children: [
-        RadioListTile<PaymentMethod>(
+        buildPaymentTile(
           value: PaymentMethod.paylater,
-          groupValue: selected,
-          onChanged: (v) => onChanged(v!),
-          title: const Text('PayLater'),
-          secondary: const Icon(Icons.account_balance_wallet_outlined),
+          title: 'PayLater',
+          assetLogo: 'assets/images/Paylater.png',
         ),
-        RadioListTile<PaymentMethod>(
+        buildPaymentTile(
           value: PaymentMethod.dana,
-          groupValue: selected,
-          onChanged: (v) => onChanged(v!),
-          title: const Text('Dana'),
-          secondary: const Icon(Icons.account_balance_wallet),
+          title: 'DANA',
+          assetLogo: 'assets/images/Dana.png',
         ),
-        RadioListTile<PaymentMethod>(
+        buildPaymentTile(
           value: PaymentMethod.cod,
-          groupValue: selected,
-          onChanged: (v) => onChanged(v!),
-          title: const Text('Bayar di tempat'),
-          secondary: const Icon(Icons.money_outlined),
+          title: 'Bayar di Tempat (COD)',
+          assetLogo: 'assets/images/COD.png',
         ),
-        RadioListTile<PaymentMethod>(
+        buildPaymentTile(
           value: PaymentMethod.ovo,
-          groupValue: selected,
-          onChanged: (v) => onChanged(v!),
-          title: const Text('OVO'),
-          secondary: const Icon(Icons.payment_outlined),
+          title: 'OVO',
+          assetLogo: 'assets/images/OVO.png',
         ),
       ],
     );
