@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // <--- tambahkan ini
 import '../models/product_model.dart';
+import '../providers/cart_provider.dart'; // <--- tambahkan ini
 
 class DetailProduct extends StatelessWidget {
   final Product product;
@@ -68,7 +70,7 @@ class DetailProduct extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Gambar produk (fixed: max height + contain)
+                    // Gambar produk
                     Stack(
                       alignment: Alignment.bottomCenter,
                       children: [
@@ -76,12 +78,12 @@ class DetailProduct extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(
-                              maxHeight: 250, // batasi tinggi maksimal agar tidak terlalu besar
+                              maxHeight: 250,
                             ),
                             child: Image.asset(
                               product.imagePath,
                               width: double.infinity,
-                              fit: BoxFit.contain, // tampilkan gambar utuh tanpa crop
+                              fit: BoxFit.contain,
                               filterQuality: FilterQuality.high,
                               errorBuilder: (context, error, stackTrace) {
                                 return const SizedBox(
@@ -282,14 +284,20 @@ class DetailProduct extends StatelessWidget {
               ),
               child: Row(
                 children: [
+                  // Tombol Tambah ke Keranjang
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        // Panggil provider
+                        final cart = Provider.of<CartProvider>(context, listen: false);
+                        cart.addToCart(product);
+
+                        // Tampilkan snackbar
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF124170),
                             content: Text(
-                              '${product.name} ditambahkan ke keranjang!',
+                              '${product.name} berhasil ditambahkan ke keranjang!',
                               style: const TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.white,
@@ -317,9 +325,14 @@ class DetailProduct extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
+
+                  // Tombol Checkout
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // Arahkan ke halaman pembayaran langsung
+                        Navigator.pushNamed(context, '/payment');
+                      },
                       style: OutlinedButton.styleFrom(
                         backgroundColor: const Color(0xFFB0C0CF),
                         side: const BorderSide(color: Color(0xFF124170), width: 2),

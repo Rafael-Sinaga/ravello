@@ -13,7 +13,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   provider: ^6.1.2  # Tambahan untuk state management (Cart, Favorite, dll)
-
+  slide_to_act: ^2.0.2
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -29,6 +30,7 @@ flutter:
     - assets/images/Sepatu.png
     - assets/images/Gelang_rajut.png
     - assets/images/Jersey.png
+    - assets/images/Rolex_KW.png
     - assets/images/Dana.png
     - assets/images/Paylater.png
     - assets/images/OVO.png
