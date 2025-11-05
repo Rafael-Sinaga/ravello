@@ -2,99 +2,213 @@
 import 'package:flutter/material.dart';
 import '../widgets/navbar.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends State<ProfilePage> {
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF8FBFD),
       appBar: AppBar(
-        title: const Text(
-          'Profil Saya',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0.5,
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF124170), size: 22),
+              onPressed: () => Navigator.pop(context),
+            ),
+            const Expanded(
+              child: Text(
+                'Profil',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF124170),
+                ),
+              ),
+            ),
+            const SizedBox(width: 48),
+          ],
+        ),
       ),
 
-      // isi halaman profil
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Foto profil + nama
-            Center(
-              child: Column(
+            // ===== CARD PROFIL USER =====
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: AssetImage('assets/images/default_user.png'),
+                    radius: 28,
+                    backgroundImage: AssetImage('assets/images/Profile.png'),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Nama Pengguna',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Halo,',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            color: Color(0xFF6F7D8D),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Budi Sigma',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF124170),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'budisigma69@gmail.com',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFFB0B9C3),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'user@email.com',
-                    style: TextStyle(color: Colors.grey[600]),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {},
+                    child: Row(
+                      children: const [
+                        Text(
+                          'Edit',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF124170),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.edit_outlined,
+                            color: Color(0xFF124170), size: 18),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
 
-            // Menu pengaturan akun
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+            const SizedBox(height: 28),
+
+            // ===== CONTAINER AKUN SAYA =====
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildMenuItem(
-                    icon: Icons.person_outline,
-                    title: 'Edit Profil',
-                    onTap: () {
-                      // nanti arahkan ke halaman edit profil
-                    },
+                  const Text(
+                    'Akun Saya',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF124170),
+                    ),
                   ),
-                  _buildMenuItem(
-                    icon: Icons.history,
-                    title: 'Riwayat Pesanan',
-                    onTap: () {
-                      // arahkan ke halaman riwayat pesanan
-                    },
+                  const SizedBox(height: 14),
+
+                  _buildMenuCard(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Pesanan saya',
+                    subtitle: 'Tinjau pesanan sebelum dan sekarang',
+                    onTap: () {},
                   ),
-                  _buildMenuItem(
-                    icon: Icons.favorite_border,
+                  _buildMenuCard(
+                    icon: Icons.notifications_none_rounded,
+                    title: 'Notifikasi',
+                    subtitle: 'Tinjau semua notifikasi',
+                    onTap: () {},
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.favorite_border_rounded,
                     title: 'Favorit Saya',
-                    onTap: () {
-                      Navigator.pushNamed(context, '/favorite');
-                      // arahkan ke wishlist atau favorit
-                    },
+                    subtitle: 'Tinjau barang favoritmu',
+                    onTap: () {},
                   ),
-                  _buildMenuItem(
-                    icon: Icons.settings_outlined,
-                    title: 'Pengaturan Akun',
-                    onTap: () {
-                      // halaman pengaturan
-                    },
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 26),
+
+            // ===== CONTAINER MULAI JUAL =====
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                  _buildMenuItem(
-                    icon: Icons.logout,
-                    title: 'Keluar',
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Mulai Jual',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF124170),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildMenuCard(
+                    icon: Icons.storefront_outlined,
+                    title: 'Buka Toko Sekarang',
+                    subtitle: 'Jual produkmu dan mulai hasilkan pendapatan',
                     onTap: () {
-                      // log out
+                      // Navigasi ke halaman registrasi penjual
+                      Navigator.pushNamed(context, '/registerSeller');
                     },
-                    isLogout: true,
                   ),
                 ],
               ),
@@ -103,33 +217,55 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
 
-      // Navbar di bagian bawah
-      bottomNavigationBar: const Navbar(currentIndex: 2), // sesuai urutan: 0=home,1=cart,2=profile
+      bottomNavigationBar: const Navbar(currentIndex: 2),
     );
   }
 
-  // Widget helper buat item menu
-  Widget _buildMenuItem({
+  Widget _buildMenuCard({
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
-    bool isLogout = false,
   }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isLogout ? Colors.redAccent : Colors.black87,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          color: isLogout ? Colors.redAccent : Colors.black87,
-          fontWeight: isLogout ? FontWeight.w600 : FontWeight.normal,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icon, color: const Color(0xFF124170), size: 28),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF124170),
+            fontSize: 15,
+          ),
         ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: Color(0xFF6F7D8D),
+            fontSize: 13,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          color: Colors.black38,
+          size: 18,
+        ),
+        onTap: onTap,
       ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     );
   }
 }
