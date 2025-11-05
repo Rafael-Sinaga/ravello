@@ -77,6 +77,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.favorite_border,
                     title: 'Favorit Saya',
                     onTap: () {
+                      Navigator.pushNamed(context, '/favorite');
                       // arahkan ke wishlist atau favorit
                     },
                   ),
