@@ -85,39 +85,53 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (hasDiscount)
-                    Row(
+
+                  // ===== Harga konsisten tinggi =====
+                  SizedBox(
+                    height: 44, // samakan dengan HomePage
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Rp ${product.price.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 11,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
+                        if (hasDiscount) ...[
+                          Row(
+                            children: [
+                              Text(
+                                'Rp ${product.price.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '-${product.discount!.toStringAsFixed(0)}%',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 4),
+                          const SizedBox(height: 4),
+                        ],
                         Text(
-                          '-${product.discount!.toStringAsFixed(0)}%',
+                          'Rp ${discountedPrice.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontFamily: 'Poppins',
-                            fontSize: 11,
-                            color: Colors.red,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
+                            color: Color(0xFF124170),
                           ),
                         ),
                       ],
                     ),
-                  Text(
-                    'Rp ${discountedPrice.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF124170),
-                    ),
                   ),
+
                   const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,

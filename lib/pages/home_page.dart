@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
       price: 300000,
       imagePath: 'assets/images/Gelang_rajut.png',
       description: 'Gelang rajut warna-warni handmade cocok untuk segala usia.',
+      discount: 30, // contoh diskon
     ),
     Product(
       name: 'Jersey',
@@ -32,12 +33,14 @@ class _HomePageState extends State<HomePage> {
       price: 20000,
       imagePath: 'assets/images/Sepatu.png',
       description: 'Sepatu lokal gaya kasual dengan harga super terjangkau.',
+      discount: 50, // contoh diskon
     ),
     Product(
       name: 'Rolex KW',
       price: 300000,
       imagePath: 'assets/images/Rolex_KW.png',
       description: 'Jam tangan elegan, kualitas tinggi dengan harga ramah.',
+      discount: 10, // contoh diskon kecil
     ),
     Product(
       name: 'Sepatu Kulit Lokal',
@@ -318,6 +321,13 @@ class _HomePageState extends State<HomePage> {
                   itemCount: productList.length,
                   itemBuilder: (context, index) {
                     final product = productList[index];
+
+                    // Hanya ubah tampilan harga di sini (minimal change)
+                    final hasDiscount = product.discount != null && product.discount! > 0;
+                    final double discountedPrice = hasDiscount
+                        ? product.price - (product.price * (product.discount! / 100))
+                        : product.price;
+
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -369,15 +379,55 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    'Rp ${_formatPrice(product.price)}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF124170),
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Poppins',
+
+                                  // === TAMPILAN HARGA (konsisten tinggi) ===
+                                  // Kita pakai SizedBox fixed height supaya semua kotak
+                                  // harga punya tinggi yang sama.
+                                  SizedBox(
+                                    height: 44, // konsisten untuk semua kartu
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (hasDiscount) ...[
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Rp ${_formatPrice(product.price)}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey,
+                                                  fontFamily: 'Poppins',
+                                                  decoration: TextDecoration.lineThrough,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '-${product.discount!.toStringAsFixed(0)}%',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontFamily: 'Poppins',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                        ],
+                                        Text(
+                                          'Rp ${_formatPrice(discountedPrice)}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF124170),
+                                            fontWeight: FontWeight.w600,
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
+
                                   const SizedBox(height: 8),
                                   SizedBox(
                                     width: double.infinity,

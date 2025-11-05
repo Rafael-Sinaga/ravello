@@ -4,13 +4,21 @@ import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
 import 'checkout_page.dart'; // <--- tambahkan ini
 
-class DetailProduct extends StatelessWidget {
+class DetailProduct extends StatefulWidget {
   final Product product;
 
   const DetailProduct({super.key, required this.product});
 
   @override
+  State<DetailProduct> createState() => _DetailProductState();
+}
+
+class _DetailProductState extends State<DetailProduct> {
+  String? selectedSize; // ukuran yang dipilih user
+
+  @override
   Widget build(BuildContext context) {
+    final product = widget.product;
     final bool hasDiscount = product.discount != null && product.discount! > 0;
     final double discountedPrice = hasDiscount
         ? product.price - (product.price * product.discount! / 100)
@@ -141,57 +149,108 @@ class DetailProduct extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Harga dan diskon
+                    // ===== Harga (konsisten tinggi area) =====
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Rp ${discountedPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF124170),
-                            ),
-                          ),
-                          if (hasDiscount) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(6),
+                      child: SizedBox(
+                        height: 56, // cukup untuk menampung harga lama + diskon + spacing
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hasDiscount)
+                              Row(
+                                children: [
+                                  Text(
+                                    'Rp ${product.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 15,
+                                      color: Colors.grey,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade100,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '-${product.discount!.toStringAsFixed(0)}%',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 13,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Text(
-                                '-${product.discount!.toStringAsFixed(0)}%',
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Rp ${discountedPrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF124170),
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
 
-                    if (hasDiscount)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Text(
-                          'Rp ${product.price.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
+                    const SizedBox(height: 20),
+
+                    // ====== Tambahan: Pilihan Ukuran ======
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Pilih Ukuran',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            children: ['S', 'M', 'L', 'XL'].map((size) {
+                              final bool isSelected = selectedSize == size;
+                              return ChoiceChip(
+                                label: Text(
+                                  size,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : const Color(0xFF124170),
+                                  ),
+                                ),
+                                selected: isSelected,
+                                selectedColor: const Color(0xFF124170),
+                                backgroundColor: const Color(0xFFE8EEF3),
+                                onSelected: (_) {
+                                  setState(() => selectedSize = size);
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
+                    ),
+                    // ====== End Tambahan ======
 
                     const SizedBox(height: 20),
 
@@ -251,6 +310,14 @@ class DetailProduct extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        if (selectedSize == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Silakan pilih ukuran terlebih dahulu'),
+                            ),
+                          );
+                          return;
+                        }
                         final cart =
                             Provider.of<CartProvider>(context, listen: false);
                         cart.addToCart(product);
@@ -258,7 +325,7 @@ class DetailProduct extends StatelessWidget {
                           SnackBar(
                             backgroundColor: const Color(0xFF124170),
                             content: Text(
-                              '${product.name} berhasil ditambahkan ke keranjang!',
+                              '${product.name} ukuran $selectedSize berhasil ditambahkan ke keranjang!',
                               style: const TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.white,
@@ -291,6 +358,14 @@ class DetailProduct extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
+                        if (selectedSize == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Silakan pilih ukuran terlebih dahulu'),
+                            ),
+                          );
+                          return;
+                        }
                         final cart =
                             Provider.of<CartProvider>(context, listen: false);
                         cart.addToCart(product);
