@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/navbar.dart';
 import 'favorite_page.dart';
+import 'order_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -100,7 +101,10 @@ class ProfilePage extends StatelessWidget {
                   ),
                   InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    onTap: () {},
+                    onTap: () {
+                      // TODO: arahkan ke Edit Profile page jika ada
+                      Navigator.pushNamed(context, '/editProfile');
+                    },
                     child: Row(
                       children: const [
                         Text(
@@ -151,18 +155,33 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
+                  // Pesanan saya -> buka OrderPage (buyer flow)
                   _buildMenuCard(
                     icon: Icons.inventory_2_outlined,
                     title: 'Pesanan saya',
                     subtitle: 'Tinjau pesanan sebelum dan sekarang',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const OrderPage(),
+                        ),
+                      );
+                    },
                   ),
+
+                  // Notifikasi -> named route (gantikan jika berbeda)
                   _buildMenuCard(
                     icon: Icons.notifications_none_rounded,
                     title: 'Notifikasi',
                     subtitle: 'Tinjau semua notifikasi',
-                    onTap: () {},
+                    onTap: () {
+                      // jika lu punya halaman notifikasi, daftarkan route di main.dart
+                      Navigator.pushNamed(context, '/notifications');
+                    },
                   ),
+
+                  // Favorit -> buka FavoritePage
                   _buildMenuCard(
                     icon: Icons.favorite_border_rounded,
                     title: 'Favorit Saya',
@@ -170,7 +189,9 @@ class ProfilePage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => FavoritePage()),
+                        MaterialPageRoute(
+                          builder: (context) => const FavoritePage(),
+                        ),
                       );
                     },
                   ),
@@ -212,7 +233,7 @@ class ProfilePage extends StatelessWidget {
                     title: 'Buka Toko Sekarang',
                     subtitle: 'Jual produkmu dan mulai hasilkan pendapatan',
                     onTap: () {
-                      // Navigasi ke halaman registrasi penjual
+                      // named route; daftarkan '/registerSeller' di main.dart jika belum ada
                       Navigator.pushNamed(context, '/registerSeller');
                     },
                   ),
