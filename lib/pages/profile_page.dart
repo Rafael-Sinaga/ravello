@@ -1,6 +1,7 @@
 // lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
 import '../widgets/navbar.dart';
+import 'favorite_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -166,7 +167,12 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.favorite_border_rounded,
                     title: 'Favorit Saya',
                     subtitle: 'Tinjau barang favoritmu',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => FavoritePage()),
+                      );
+                    },
                   ),
                 ],
               ),
