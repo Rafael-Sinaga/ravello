@@ -6,7 +6,6 @@ class OrderPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Data dummy sementara
     final List<Map<String, dynamic>> orders = [
       {
         'image': 'assets/images/product1.png',
@@ -41,8 +40,13 @@ class OrderPage extends StatelessWidget {
           ),
         ),
         backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Color(0xFF124170)),
         elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF124170)),
+          onPressed: () {
+            Navigator.pushReplacementNamed(context, '/home');
+          },
+        ),
       ),
       backgroundColor: const Color(0xFFF8FBFD),
       body: ListView.builder(
@@ -116,9 +120,6 @@ class OrderPage extends StatelessWidget {
                   color: Color(0xFF124170),
                 ),
               ),
-              onTap: () {
-                // nanti bisa diarahkan ke detail pesanan
-              },
             ),
           );
         },

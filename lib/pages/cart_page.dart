@@ -1,8 +1,10 @@
+// lib/pages/cart_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import 'checkout_page.dart'; // 🔹 Tambahkan import ke halaman checkout
-import '../widgets/navbar.dart'; // 🔹 tambahkan import navbar
+import 'checkout_page.dart';
+import '../widgets/navbar.dart';
+import 'home_page.dart';
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
@@ -12,17 +14,22 @@ class CartPage extends StatelessWidget {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FDFA), // 🔹 Warna dasar background
+      backgroundColor: const Color(0xFFF8FDFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8FDFA), // 🔹 Putih sesuai tema
+        backgroundColor: const Color(0xFFF8FDFA),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF124170)), // 🔹 Ikon biru
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF124170)),
+          onPressed: () {
+            Navigator.pushReplacementNamed(context, '/home');
+          },
+        ),
         title: const Text(
           'Keranjang',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w600,
-            color: Color(0xFF124170), // 🔹 Font biru
+            color: Color(0xFF124170),
           ),
         ),
         centerTitle: true,
@@ -47,6 +54,12 @@ class CartPage extends StatelessWidget {
                     itemCount: cart.items.length,
                     itemBuilder: (context, index) {
                       final product = cart.items[index];
+
+                      // Pastikan properti sesuai Product model: imagePath, name, price
+                      final imagePath = (product.imagePath ?? '') as String;
+                      final name = (product.name ?? '') as String;
+                      final price = product.price; // int or double
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -68,22 +81,37 @@ class CartPage extends StatelessWidget {
                           contentPadding: const EdgeInsets.all(12),
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(
-                              product.imagePath,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                  Icons.broken_image,
-                                  size: 40,
-                                  color: Colors.grey,
-                                );
-                              },
-                            ),
+                            child: (imagePath.isNotEmpty)
+                                ? Image.asset(
+                                    imagePath,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                      return Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(
+                                          Icons.image_not_supported,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                           ),
                           title: Text(
-                            product.name,
+                            name,
                             style: const TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 15,
@@ -92,7 +120,7 @@ class CartPage extends StatelessWidget {
                             ),
                           ),
                           subtitle: Text(
-                            'Rp ${product.price}',
+                            'Rp ${_formatPrice(price)}',
                             style: const TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 13,
@@ -114,7 +142,8 @@ class CartPage extends StatelessWidget {
           ),
           if (cart.items.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: Color(0xFFF8FDFA),
                 border: Border(
@@ -127,7 +156,7 @@ class CartPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Total: Rp ${cart.totalPrice}',
+                      'Total: Rp ${_formatPrice(cart.totalPrice)}',
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 16,
@@ -137,7 +166,7 @@ class CartPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        // 🔹 Tampilkan notifikasi terlebih dahulu
+                        // notifikasi kecil
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Color(0xFF124170),
@@ -152,8 +181,7 @@ class CartPage extends StatelessWidget {
                           ),
                         );
 
-                        // 🔹 Navigasi ke halaman checkout setelah sedikit delay
-                        Future.delayed(const Duration(milliseconds: 800), () {
+                        Future.delayed(const Duration(milliseconds: 500), () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -188,7 +216,24 @@ class CartPage extends StatelessWidget {
             ),
         ],
       ),
-      bottomNavigationBar: const Navbar(currentIndex: 1), // 🔹 tambahkan navbar
+      bottomNavigationBar: const Navbar(currentIndex: 1),
     );
+  }
+
+  String _formatPrice(dynamic price) {
+    // pastikan price berupa int
+    final intValue = (price is int) ? price : (price as double).toInt();
+    final s = intValue.toString();
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = s.length - 1; i >= 0; i--) {
+      buffer.write(s[i]);
+      count++;
+      if (count == 3 && i != 0) {
+        buffer.write('.');
+        count = 0;
+      }
+    }
+    return buffer.toString().split('').reversed.join('');
   }
 }
