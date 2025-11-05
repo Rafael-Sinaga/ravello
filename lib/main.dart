@@ -8,6 +8,7 @@ import 'package:ravello/pages/home_page.dart';
 import 'package:ravello/pages/cart_page.dart';
 import 'package:ravello/pages/onboarding.dart';
 import 'package:ravello/pages/checkout_page.dart';
+import 'package:ravello/pages/profile_page.dart'; // ✅ tambahkan import profile_page
 import 'package:ravello/providers/cart_provider.dart';
 
 void main() {
@@ -43,6 +44,7 @@ class RavelloApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/cart': (context) => const CartPage(),
         '/checkout': (context) => const CheckoutPage(),
+        '/profile': (context) => const ProfilePage(), // ✅ route baru ditambahkan
         // '/payment': (context) => const PaymentPage(), // <- dihapus
       },
     );

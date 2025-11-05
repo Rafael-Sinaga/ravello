@@ -1,37 +1,56 @@
-// navbar.dart
+// lib/widgets/navbar.dart
 import 'package:flutter/material.dart';
 
 class Navbar extends StatefulWidget {
-  const Navbar({super.key});
+  final int currentIndex; // parameter baru agar bisa sinkron antar halaman
+
+  const Navbar({
+    super.key,
+    required this.currentIndex,
+  });
 
   @override
   State<Navbar> createState() => _NavbarState();
 }
 
 class _NavbarState extends State<Navbar> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.currentIndex; // set index aktif dari luar
+  }
 
   void _onItemTapped(int index) {
+    if (index == _selectedIndex) return; // hindari reload halaman yang sama
     setState(() => _selectedIndex = index);
 
-    if (index == 1) {
-      // index 1 = ikon keranjang
-      Navigator.pushNamed(context, '/cart');
+    // Navigasi antar halaman
+    switch (index) {
+      case 0: // Beranda
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1: // Keranjang
+        Navigator.pushReplacementNamed(context, '/cart');
+        break;
+      case 2: // Profil
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
     }
-    // index 0 = beranda, tidak melakukan navigasi
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // warna navbar putih
+        color: Colors.white, // sesuai desain Figma
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withOpacity(0.20), // #000000 @ 20%
-            offset: const Offset(0, -3), // X=0, Y=-3 (shadow di atas)
-            blurRadius: 10, // Blur = 10
-            spreadRadius: 0, // Spread = 0
+            color: const Color(0xFF000000).withOpacity(0.20),
+            offset: const Offset(0, -3),
+            blurRadius: 10,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -39,7 +58,7 @@ class _NavbarState extends State<Navbar> {
         top: false,
         child: BottomNavigationBar(
           backgroundColor: Colors.white,
-          elevation: 0, // gunakan shadow custom, bukan shadow default
+          elevation: 0, // karena shadow custom udah ada
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           selectedItemColor: const Color(0xFF124170),
@@ -54,6 +73,10 @@ class _NavbarState extends State<Navbar> {
             BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart_outlined),
               label: 'Keranjang',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              label: 'Profil',
             ),
           ],
         ),

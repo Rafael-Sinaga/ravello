@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import 'checkout_page.dart'; // 🔹 Tambahkan import ke halaman checkout
+import '../widgets/navbar.dart'; // 🔹 tambahkan import navbar
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
@@ -187,6 +188,7 @@ class CartPage extends StatelessWidget {
             ),
         ],
       ),
+      bottomNavigationBar: const Navbar(currentIndex: 1), // 🔹 tambahkan navbar
     );
   }
 }

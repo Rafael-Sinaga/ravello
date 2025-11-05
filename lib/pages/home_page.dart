@@ -86,7 +86,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      bottomNavigationBar: const Navbar(),
+      bottomNavigationBar: const Navbar(currentIndex: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
