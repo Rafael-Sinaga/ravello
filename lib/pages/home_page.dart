@@ -5,6 +5,7 @@ import '../models/product_model.dart';
 import '../pages/detail_product.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/navbar.dart';
+import '../pages/notification_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -131,7 +132,14 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationPage(),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.notifications_none,
                           color: Color(0xFF124170)),
                     ),
