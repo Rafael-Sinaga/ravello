@@ -4,6 +4,93 @@ import 'package:flutter/material.dart';
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
 
+  // Data dummy untuk notifikasi pesanan selesai
+  final List<Map<String, dynamic>> completedOrders = const [
+    {
+      'id': 'ORD001',
+      'productName': 'Gelang Rajut',
+      'productImage': 'assets/images/Gelang_rajut.png',
+      'price': 240000,
+      'status': 'selesai',
+      'orderDate': '2024-01-15',
+      'timeAgo': '1j',
+    },
+    {
+      'id': 'ORD002',
+      'productName': 'Jersey FC Barcelona',
+      'productImage': 'assets/images/Jersey.png',
+      'price': 120000,
+      'status': 'selesai',
+      'orderDate': '2024-01-14',
+      'timeAgo': '2j',
+    },
+    {
+      'id': 'ORD003',
+      'productName': 'Rolex KW Super',
+      'productImage': 'assets/images/Rolex_KW.png',
+      'price': 300000,
+      'status': 'selesai',
+      'orderDate': '2024-01-13',
+      'timeAgo': '5j',
+    },
+    {
+      'id': 'ORD004', 
+      'productName': 'Sepatu Sport',
+      'productImage': 'assets/images/Sepatu.png',
+      'price': 200000,
+      'status': 'diproses',
+      'orderDate': '2024-01-15',
+      'timeAgo': '1h',
+    },
+    {
+      'id': 'ORD005',
+      'productName': 'Tas Kulit Lokal',
+      'productImage': 'assets/images/Gelang_rajut.png', // placeholder
+      'price': 185000,
+      'status': 'dikirim',
+      'orderDate': '2024-01-15',
+      'timeAgo': '2h',
+    },
+  ];
+
+  // Format currency
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+  }
+
+  // Get status text dan color
+  Map<String, dynamic> _getStatusInfo(String status) {
+    switch (status) {
+      case 'selesai':
+        return {
+          'text': 'Pesanan Selesai',
+          'color': Colors.green,
+          'description': 'Beri nilai untuk pesanan yang sudah selesai'
+        };
+      case 'diproses':
+        return {
+          'text': 'Pesanan Diproses',
+          'color': Colors.orange,
+          'description': 'Pesanan Anda sedang dalam proses pengiriman'
+        };
+      case 'dikirim':
+        return {
+          'text': 'Pesanan Dikirim',
+          'color': Colors.blue,
+          'description': 'Pesanan Anda telah dikirim oleh kurir'
+        };
+      default:
+        return {
+          'text': 'Pesanan',
+          'color': Colors.grey,
+          'description': 'Status pesanan'
+        };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,35 +142,21 @@ class NotificationPage extends StatelessWidget {
 
           // List Notifikasi
           Expanded(
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(0),
-              children: [
-                _buildNotificationItem(
-                  title: 'Pesanan Selesai',
-                  description: 'Beri nilai untuk pesanan yang sudah selesai',
-                  time: '1j',
-                ),
-                _buildNotificationItem(
-                  title: 'Pesanan Selesai',
-                  description: 'Beri nilai untuk pesanan yang sudah selesai',
-                  time: '2j',
-                ),
-                _buildNotificationItem(
-                  title: 'Pesanan Selesai',
-                  description: 'Beri nilai untuk pesanan yang sudah selesai',
-                  time: '5j',
-                ),
-                _buildNotificationItem(
-                  title: 'Pesanan Diproses',
-                  description: 'Pesanan Anda sedang dalam proses pengiriman',
-                  time: '1h',
-                ),
-                _buildNotificationItem(
-                  title: 'Pesanan Dikirim',
-                  description: 'Pesanan Anda telah dikirim oleh kurir',
-                  time: '2h',
-                ),
-              ],
+              itemCount: completedOrders.length,
+              itemBuilder: (context, index) {
+                final order = completedOrders[index];
+                final statusInfo = _getStatusInfo(order['status']);
+
+                return _buildNotificationItem(
+                  order: order,
+                  statusInfo: statusInfo,
+                  onTap: () {
+                    _showRatingDialog(context, order);
+                  },
+                );
+              },
             ),
           ),
 
@@ -107,13 +180,12 @@ class NotificationPage extends StatelessWidget {
   }
 
   Widget _buildNotificationItem({
-    required String title,
-    required String description,
-    required String time,
+    required Map<String, dynamic> order,
+    required Map<String, dynamic> statusInfo,
+    required VoidCallback onTap,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -129,62 +201,200 @@ class NotificationPage extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon notifikasi
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF124170).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.shopping_bag_outlined,
-              color: Color(0xFF124170),
-              size: 20,
-            ),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          // Konten notifikasi
-          Expanded(
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: order['status'] == 'selesai' ? onTap : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                // Gambar produk
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey.shade100,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      order['productImage'],
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.shopping_bag, color: Colors.grey),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6F7D8D),
-                    height: 1.4,
-                    fontFamily: 'Poppins',
+
+                const SizedBox(width: 12),
+
+                // Info produk dan status
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status dengan color coding
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: statusInfo['color'],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            statusInfo['text'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: statusInfo['color'],
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            order['timeAgo'],
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Nama produk
+                      Text(
+                        order['productName'],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Harga
+                      Text(
+                        'Rp ${_formatPrice(order['price'])}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF124170),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Deskripsi status
+                      Text(
+                        statusInfo['description'],
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6F7D8D),
+                          height: 1.4,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+
+                      // Tombol untuk pesanan selesai
+                      if (order['status'] == 'selesai') ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: onTap,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF124170),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Beri Nilai',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          
-          // Waktu
-          Text(
-            time,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontFamily: 'Poppins',
+        ),
+      ),
+    );
+  }
+
+  void _showRatingDialog(BuildContext context, Map<String, dynamic> order) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Beri Nilai Produk',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              order['productName'],
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
+            const SizedBox(height: 16),
+            const Text('Bagaimana kualitas produk?'),
+            const SizedBox(height: 8),
+            // Tambahkan rating stars di sini jika mau
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Terima kasih telah menilai ${order['productName']}'),
+                  backgroundColor: const Color(0xFF124170),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF124170),
+            ),
+            child: const Text('Kirim Nilai'),
           ),
         ],
       ),
