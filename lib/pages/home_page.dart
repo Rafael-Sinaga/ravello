@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../pages/detail_product.dart';
 import '../providers/cart_provider.dart';
+import '../providers/order_provider.dart';
 import '../widgets/navbar.dart';
 import '../pages/notification_page.dart';
 
@@ -15,8 +16,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Hapus productList lokal — sekarang menggunakan `products` dari product_model.dart
-
   int currentPromo = 0;
   final PageController _promoController = PageController();
   Timer? _promoTimer;
@@ -50,6 +49,12 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final orderProvider = Provider.of<OrderProvider>(context);
+
+    // Cek apakah ada pesanan yang belum selesai → tampilkan titik merah di notifikasi
+    final hasPendingOrders = orderProvider.orders.any(
+      (p) => orderProvider.getStatus(p) != 'Selesai',
+    );
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -97,17 +102,37 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationPage(),
+                    Stack(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                               builder: (context) => NotificationPage(orders: orderProvider.orders),
+
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.notifications_none,
+                            color: Color(0xFF124170),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.notifications_none,
-                          color: Color(0xFF124170)),
+                        ),
+                        if (hasPendingOrders)
+                          Positioned(
+                            right: 10,
+                            top: 10,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF124170),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     IconButton(
                       onPressed: () {},
@@ -147,7 +172,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 20),
 
-                // KATEGORI (scroll horizontal)
+                // KATEGORI
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -292,12 +317,9 @@ class _HomePageState extends State<HomePage> {
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  // Ganti itemCount dan pengambilan produk: gunakan `products` (sumber utama)
                   itemCount: products.length,
                   itemBuilder: (context, index) {
                     final product = products[index];
-
-                    // Hanya ubah tampilan harga di sini (minimal change)
                     final hasDiscount = product.discount != null && product.discount! > 0;
                     final double discountedPrice = hasDiscount
                         ? product.price - (product.price * (product.discount! / 100))
@@ -328,8 +350,8 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(12)),
+                              borderRadius:
+                                  const BorderRadius.vertical(top: Radius.circular(12)),
                               child: Image.asset(
                                 product.imagePath,
                                 height: 120,
@@ -354,12 +376,8 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-
-                                  // === TAMPILAN HARGA (konsisten tinggi) ===
-                                  // Kita pakai SizedBox fixed height supaya semua kotak
-                                  // harga punya tinggi yang sama.
                                   SizedBox(
-                                    height: 44, // konsisten untuk semua kartu
+                                    height: 44,
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,7 +420,6 @@ class _HomePageState extends State<HomePage> {
                                       ],
                                     ),
                                   ),
-
                                   const SizedBox(height: 8),
                                   SizedBox(
                                     width: double.infinity,
@@ -427,11 +444,9 @@ class _HomePageState extends State<HomePage> {
                                         });
                                       },
                                       style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(
-                                            color: Color(0xFF124170)),
+                                        side: const BorderSide(color: Color(0xFF124170)),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 6, horizontal: 8),
@@ -533,8 +548,7 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius:
-                const BorderRadius.horizontal(left: Radius.circular(12)),
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
             child: Image.asset(
               imagePath,
               width: 110,

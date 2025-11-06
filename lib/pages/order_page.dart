@@ -1,11 +1,65 @@
 // lib/pages/order_page.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/order_provider.dart';
 import '../models/product_model.dart';
 
-class OrderPage extends StatelessWidget {
+class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
+
+  @override
+  State<OrderPage> createState() => _OrderPageState();
+}
+
+class _OrderPageState extends State<OrderPage> {
+  String _status = 'Diproses';
+  int _remainingSeconds = 60; // 1 menit per proses
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+        });
+      } else {
+        _nextStatus();
+      }
+    });
+  }
+
+  void _nextStatus() {
+    if (_status == 'Diproses') {
+      setState(() {
+        _status = 'Sedang dikirim';
+        _remainingSeconds = 60;
+      });
+    } else if (_status == 'Sedang dikirim') {
+      setState(() {
+        _status = 'Selesai';
+        _timer?.cancel();
+      });
+    }
+  }
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +100,15 @@ class OrderPage extends StatelessWidget {
               itemCount: orders.length,
               itemBuilder: (context, index) {
                 final Product order = orders[index];
-                final String status = index == 0
-                    ? 'Sedang dikirim'
-                    : index == 1
-                        ? 'Selesai'
-                        : 'Diproses';
+                final bool isActiveOrder = index == 0;
+
+                // Jika pesanan pertama, gunakan status dan waktu dinamis
+                final String status = isActiveOrder ? _status : 'Selesai';
+                final Color statusColor = status == 'Selesai'
+                    ? Colors.green
+                    : status == 'Sedang dikirim'
+                        ? Colors.orange
+                        : Colors.blue;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -92,15 +150,21 @@ class OrderPage extends StatelessWidget {
                         Text(
                           status,
                           style: TextStyle(
-                            color: status == 'Selesai'
-                                ? Colors.green
-                                : status == 'Dibatalkan'
-                                    ? Colors.red
-                                    : Colors.orange,
+                            color: statusColor,
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
                         ),
+                        if (isActiveOrder && status != 'Selesai') ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Waktu tersisa: ${_formatTime(_remainingSeconds)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6F7D8D),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 2),
                         const Text(
                           '2 November 2025',
