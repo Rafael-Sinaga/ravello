@@ -15,41 +15,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final List<Product> productList = [
-    Product(
-      name: 'Gelang Rajut',
-      price: 300000,
-      imagePath: 'assets/images/Gelang_rajut.png',
-      description: 'Gelang rajut warna-warni handmade cocok untuk segala usia.',
-      discount: 30, // contoh diskon
-    ),
-    Product(
-      name: 'Jersey',
-      price: 120000,
-      imagePath: 'assets/images/Jersey.png',
-      description: 'Jersey premium bahan halus dengan desain sporty elegan.',
-    ),
-    Product(
-      name: 'Sepatu Abibas',
-      price: 20000,
-      imagePath: 'assets/images/Sepatu.png',
-      description: 'Sepatu lokal gaya kasual dengan harga super terjangkau.',
-      discount: 50, // contoh diskon
-    ),
-    Product(
-      name: 'Rolex KW',
-      price: 300000,
-      imagePath: 'assets/images/Rolex_KW.png',
-      description: 'Jam tangan elegan, kualitas tinggi dengan harga ramah.',
-      discount: 10, // contoh diskon kecil
-    ),
-    Product(
-      name: 'Sepatu Kulit Lokal',
-      price: 185000,
-      imagePath: 'assets/images/sepatu.png',
-      description: 'Sepatu kulit asli buatan pengrajin lokal berkualitas tinggi.',
-    ),
-  ];
+  // Hapus productList lokal — sekarang menggunakan `products` dari product_model.dart
 
   int currentPromo = 0;
   final PageController _promoController = PageController();
@@ -326,9 +292,10 @@ class _HomePageState extends State<HomePage> {
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: productList.length,
+                  // Ganti itemCount dan pengambilan produk: gunakan `products` (sumber utama)
+                  itemCount: products.length,
                   itemBuilder: (context, index) {
-                    final product = productList[index];
+                    final product = products[index];
 
                     // Hanya ubah tampilan harga di sini (minimal change)
                     final hasDiscount = product.discount != null && product.discount! > 0;

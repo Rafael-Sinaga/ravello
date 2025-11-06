@@ -4,7 +4,7 @@ class Product {
   final double price;
   final String imagePath;
   final String description;
-  final double? discount; // Tambahkan atribut diskon opsional
+  final double? discount;
 
   Product({
     required this.name,
@@ -15,29 +15,39 @@ class Product {
   });
 }
 
-// Contoh data produk
+// === Data produk utama (berasal dari HomePage kamu) ===
 final List<Product> products = [
   Product(
-    name: 'Kemeja Batik Premium',
-    price: 250000,
-    imagePath: 'assets/images/batik.jpg',
-    description:
-        'Kemeja batik dengan bahan katun premium, nyaman dipakai dan cocok untuk acara formal maupun santai.',
-    discount: 20, // Diskon 20%
+    name: 'Gelang Rajut',
+    price: 300000,
+    imagePath: 'assets/images/Gelang_rajut.png',
+    description: 'Gelang rajut warna-warni handmade cocok untuk segala usia.',
+    discount: 30,
   ),
   Product(
-    name: 'Tas Kulit Handmade',
-    price: 350000,
-    imagePath: 'assets/images/tas_kulit.jpg',
-    description:
-        'Tas kulit asli buatan tangan dengan jahitan rapi dan desain elegan. Cocok untuk pria maupun wanita.',
+    name: 'Jersey',
+    price: 120000,
+    imagePath: 'assets/images/Jersey.png',
+    description: 'Jersey premium bahan halus dengan desain sporty elegan.',
+  ),
+  Product(
+    name: 'Sepatu Abibas',
+    price: 20000,
+    imagePath: 'assets/images/Sepatu.png',
+    description: 'Sepatu lokal gaya kasual dengan harga super terjangkau.',
+    discount: 50,
+  ),
+  Product(
+    name: 'Rolex KW',
+    price: 300000,
+    imagePath: 'assets/images/Rolex_KW.png',
+    description: 'Jam tangan elegan, kualitas tinggi dengan harga ramah.',
     discount: 10,
   ),
   Product(
-    name: 'Gelang Manik Eksklusif',
-    price: 120000,
-    imagePath: 'assets/images/gelang.jpg',
-    description:
-        'Gelang manik buatan pengrajin lokal dengan desain etnik yang menawan. Tersedia dalam berbagai warna.',
+    name: 'Sepatu Kulit Lokal',
+    price: 185000,
+    imagePath: 'assets/images/sepatu.png',
+    description: 'Sepatu kulit asli buatan pengrajin lokal berkualitas tinggi.',
   ),
 ];

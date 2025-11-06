@@ -1,3 +1,4 @@
+// lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'order_page.dart';
@@ -8,6 +9,9 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+    const Color lightBackground = Color(0xFFF8FBFD);
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pushReplacement(
@@ -17,46 +21,49 @@ class ProfilePage extends StatelessWidget {
                 const HomePage(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
+              return FadeTransition(opacity: animation, child: child);
             },
           ),
         );
         return false;
       },
       child: Scaffold(
-        backgroundColor: Colors.grey[100],
+        backgroundColor: lightBackground,
         appBar: AppBar(
-          title: const Text(
-            'Profil Saya',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
+          backgroundColor: lightBackground,
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/home');
-            },
+            icon: const Icon(Icons.arrow_back, color: primaryColor, size: 26),
+            onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
           ),
+          title: const Text(
+            'Profil',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+              fontSize: 20,
+            ),
+          ),
+          centerTitle: true,
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Bagian Profil User ---
+              // === Kartu Profil ===
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     ),
@@ -65,56 +72,97 @@ class ProfilePage extends StatelessWidget {
                 child: Row(
                   children: [
                     const CircleAvatar(
-                      radius: 30,
+                      radius: 32,
                       backgroundImage: AssetImage('assets/images/profile.png'),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Rafael Sinaga',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Halo,',
+                            style: TextStyle(
+                              color: Color(0xFF6F7A74),
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'rafael.sinaga@email.com',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
+                          Text(
+                            'Budi Sigma',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            'budisigma69@gmail.com',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        // nanti bisa diarahkan ke halaman edit profil
+                      },
+                      child: Row(
+                        children: const [
+                          Text(
+                            'Edit',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.edit, size: 16, color: primaryColor),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
 
-              // --- Bagian Menu Profil ---
+              // === Judul Akun Saya ===
+              const Padding(
+                padding: EdgeInsets.only(left: 4, bottom: 10),
+                child: Text(
+                  'Akun Saya',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+
+              // === Kartu Menu ===
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      blurRadius: 6,
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    ListTile(
-                      leading: const Icon(
-                        Icons.shopping_bag_outlined,
-                        color: Colors.black87,
-                      ),
-                      title: const Text('Pesanan Saya'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Pesanan saya',
+                      subtitle: 'Tinjau pesanan sebelum dan sekarang',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -125,27 +173,23 @@ class ProfilePage extends StatelessWidget {
                       },
                     ),
                     const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.favorite_border,
-                        color: Colors.black87,
-                      ),
-                      title: const Text('Favorit Saya'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.notifications_none_rounded,
+                      title: 'Notifikasi',
+                      subtitle: 'Tinjau semua notifikasimu',
                       onTap: () {
-                        Navigator.pushReplacementNamed(context, '/favorite');
+                        // nanti diarahkan ke halaman notifikasi
                       },
                     ),
                     const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.storefront_outlined,
-                        color: Colors.black87,
-                      ),
-                      title: const Text('Mulai Jual'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.favorite_border_rounded,
+                      title: 'Favorit Saya',
+                      subtitle: 'Tinjau barang favoritmu',
                       onTap: () {
-                        // nanti diarahkan ke halaman jual
+                        Navigator.pushReplacementNamed(context, '/favorite');
                       },
                     ),
                   ],
@@ -154,8 +198,50 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: const Navbar(currentIndex: 2), // ✅ FIXED
+        bottomNavigationBar: const Navbar(currentIndex: 2),
       ),
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    const Color primaryColor = Color(0xFF124170);
+
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: primaryColor, size: 22),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: primaryColor,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF6F7A74),
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: Color(0xFF6F7A74),
+        size: 18,
+      ),
+      onTap: onTap,
     );
   }
 }

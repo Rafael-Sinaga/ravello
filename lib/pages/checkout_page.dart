@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/order_provider.dart';
 import '../widgets/checkout_item.dart';
 import '../widgets/payment_method_selector.dart';
 
@@ -86,7 +87,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // === Alamat Pengiriman ===
                       _buildCard(
                         title: 'Alamat Pengiriman',
                         child: const Text(
@@ -95,8 +95,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // === Metode Pengiriman ===
                       _buildCard(
                         title: 'Metode Pengiriman',
                         child: Column(
@@ -128,8 +126,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // === Metode Pembayaran ===
                       _buildCard(
                         title: 'Metode Pembayaran',
                         child: PaymentMethodSelector(
@@ -140,8 +136,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // === Ringkasan Pesanan ===
                       _buildCard(
                         title: 'Ringkasan Pesanan',
                         child: ListView.builder(
@@ -155,8 +149,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // === Total & Slider ===
                       _buildSlider(cart),
                     ],
                   ),
@@ -229,8 +221,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                 textAlign: TextAlign.right,
               ),
               const SizedBox(height: 12),
-
-              // Tombol slider
               GestureDetector(
                 onHorizontalDragUpdate: (details) {
                   setState(() {
@@ -318,6 +308,10 @@ class _CheckoutPageState extends State<CheckoutPage>
         break;
     }
 
+    // === Integrasi dengan OrderProvider ===
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    orderProvider.addOrders(cart.items);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -329,9 +323,9 @@ class _CheckoutPageState extends State<CheckoutPage>
 
     cart.clearCart();
 
-    // Pindah ke home setelah 2 detik
+    // Pindah ke halaman pesanan setelah 2 detik
     Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/order', (route) => false);
     });
   }
 }
