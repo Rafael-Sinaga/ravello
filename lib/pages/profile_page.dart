@@ -127,7 +127,38 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+
+              const SizedBox(height: 24),
+
+              // === Tombol Daftar Sebagai Penjual ===
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 22),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Arahkan ke halaman pendaftaran penjual
+                    Navigator.pushNamed(context, '/seller_register');
+                  },
+                  icon: const Icon(Icons.storefront_rounded, size: 20),
+                  label: const Text(
+                    'Daftar sebagai Penjual',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor.withOpacity(0.95),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                    shadowColor: primaryColor.withOpacity(0.25),
+                  ),
+                ),
+              ),
 
               // === Judul Akun Saya ===
               const Padding(
@@ -193,6 +224,37 @@ class ProfilePage extends StatelessWidget {
                       },
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // === Tombol Keluar ===
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      // log out logic nanti di sini
+                    },
+                    icon: const Icon(Icons.logout_rounded, color: primaryColor),
+                    label: const Text(
+                      'Keluar',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFB6C7D6), // abu kebiruan lembut
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50), // pill shape
+                        side: const BorderSide(color: primaryColor, width: 0.5),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
