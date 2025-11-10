@@ -1,14 +1,11 @@
+// lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'order_page.dart';
 import '../widgets/navbar.dart';
 import 'verify_seller_page.dart';
 import 'onboarding.dart';
-<<<<<<< HEAD
-import '../services/auth_service.dart';
-=======
 import 'package:shared_preferences/shared_preferences.dart';
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,13 +15,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-<<<<<<< HEAD
-  @override
-  void initState() {
-    super.initState();
-    // Debug: pastikan data user terbaca
-    print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
-=======
   String _userName = 'Budi Sigma';
   String _userEmail = 'budisigma69@gmail.com';
 
@@ -43,16 +33,12 @@ class _ProfilePageState extends State<ProfilePage> {
       if (name != null && name.isNotEmpty) _userName = name;
       if (email != null && email.isNotEmpty) _userEmail = email;
     });
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
   }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
     const Color lightBackground = Color(0xFFF8FBFD);
-
-    // Ambil data user yang sedang login dari AuthService
-    final user = AuthService.currentUser;
 
     return WillPopScope(
       onWillPop: () async {
@@ -130,11 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Text(
-<<<<<<< HEAD
-                            user?.name ?? 'Pengguna',
-=======
                             _userName,
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                             style: const TextStyle(
                               color: primaryColor,
                               fontSize: 18,
@@ -142,11 +124,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Text(
-<<<<<<< HEAD
-                            user?.email ?? 'Email tidak tersedia',
-=======
                             _userEmail,
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,
@@ -185,14 +163,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 22),
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const VerifySellerPage(),
-                      ),
-                    );
-                  },
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VerifySellerPage(),
+                    ),
+                  );
+                },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
                   label: const Text(
                     'Daftar sebagai Penjual',
@@ -262,7 +240,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: Icons.notifications_none_rounded,
                       title: 'Notifikasi',
                       subtitle: 'Tinjau semua notifikasimu',
-                      onTap: () {},
+                      onTap: () {
+                        // nanti diarahkan ke halaman notifikasi
+                      },
                     ),
                     const Divider(height: 1),
                     _buildMenuItem(
@@ -303,11 +283,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             'Apakah Anda yakin ingin keluar?',
                             style: TextStyle(fontFamily: 'Poppins'),
                           ),
-                          actionsPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => Navigator.pop(context), // Tutup pop-up
                               child: const Text(
                                 'Kembali',
                                 style: TextStyle(
@@ -318,29 +297,23 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
+                                backgroundColor: Color(0xFF124170),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-<<<<<<< HEAD
-                              onPressed: () {
-                                AuthService.logout(); // Hapus data user
-=======
                               onPressed: () async {
                                 // Hapus SharedPreferences saat logout
                                 final prefs = await SharedPreferences.getInstance();
                                 await prefs.clear();
 
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const OnboardingPage(),
+                                    builder: (context) => const OnboardingPage(),
                                   ),
-                                  (route) => false,
+                                  (route) => false, // hapus semua halaman sebelumnya
                                 );
                               },
                               child: const Text(
@@ -362,10 +335,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFB6C7D6),
+                      backgroundColor: const Color(0xFFB6C7D6), // abu kebiruan lembut
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
+                        borderRadius: BorderRadius.circular(50), // pill shape
                         side: const BorderSide(color: primaryColor, width: 0.5),
                       ),
                     ),
