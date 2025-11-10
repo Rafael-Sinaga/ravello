@@ -12,9 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  provider: ^6.1.2  # Tambahan untuk state management (Cart, Favorite, dll)
+  provider: ^6.1.2  # State management (Cart, Favorite, dll)
   slide_to_act: ^2.0.2
-  
+  http: ^1.2.2  # 🔹 Tambahan: untuk koneksi API (login/register, dll)
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
