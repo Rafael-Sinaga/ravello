@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product_model.dart';
 import '../pages/detail_product.dart';
 import '../providers/cart_provider.dart';
@@ -23,21 +22,10 @@ class _HomePageState extends State<HomePage> {
   Timer? _promoTimer;
   String? selectedCategory;
 
-  String _userName = 'Budi Sigma'; // fallback
-
   @override
   void initState() {
     super.initState();
     _startAutoScroll();
-    _loadUserName();
-  }
-
-  Future<void> _loadUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('user_name');
-    if (name != null && name.isNotEmpty) {
-      setState(() => _userName = name);
-    }
   }
 
   void _startAutoScroll() {
@@ -97,11 +85,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-<<<<<<< HEAD
                             'Halo, ${user?.name ?? "Pengguna"}',
-=======
-                            'Halo, $_userName',
->>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
