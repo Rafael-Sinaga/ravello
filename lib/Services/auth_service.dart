@@ -20,9 +20,34 @@ class AuthService {
           .timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        // Normalisasi struktur response:
+        // 1) jika backend mengembalikan { user: {...}, token: '...' }
+        // 2) jika backend mengembalikan user langsung atau menggunakan 'data'
+        dynamic user;
+        String? token;
+
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('user')) {
+            user = responseData['user'];
+          } else if (responseData.containsKey('data')) {
+            user = responseData['data'];
+          } else {
+            // fallback: mungkin responseData sendiri adalah user object
+            user = responseData;
+          }
+
+          token = responseData['token'] ??
+              (responseData['data'] is Map ? responseData['data']['token'] : null);
+        } else {
+          user = responseData;
+        }
+
         return {
           'success': true,
-          'data': jsonDecode(response.body),
+          'user': user,
+          'token': token,
         };
       } else {
         return {

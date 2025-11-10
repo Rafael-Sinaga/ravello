@@ -5,10 +5,35 @@ import 'order_page.dart';
 import '../widgets/navbar.dart';
 import 'verify_seller_page.dart';
 import 'onboarding.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  String _userName = 'Budi Sigma';
+  String _userEmail = 'budisigma69@gmail.com';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name');
+    final email = prefs.getString('user_email');
+
+    setState(() {
+      if (name != null && name.isNotEmpty) _userName = name;
+      if (email != null && email.isNotEmpty) _userEmail = email;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,8 +107,8 @@ class ProfilePage extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             'Halo,',
                             style: TextStyle(
                               color: Color(0xFF6F7A74),
@@ -91,16 +116,16 @@ class ProfilePage extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Budi Sigma',
-                            style: TextStyle(
+                            _userName,
+                            style: const TextStyle(
                               color: primaryColor,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            'budisigma69@gmail.com',
-                            style: TextStyle(
+                            _userEmail,
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,
                             ),
@@ -167,7 +192,6 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
-              // === Judul Akun Saya ===
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
@@ -279,7 +303,11 @@ class ProfilePage extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              onPressed: () {
+                              onPressed: () async {
+                                // Hapus SharedPreferences saat logout
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.clear();
+
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
