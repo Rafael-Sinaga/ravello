@@ -8,7 +8,7 @@ class AuthService {
 
   /// Fungsi Login
   static Future<Map<String, dynamic>> login(String email, String password) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/login');
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
 
     try {
       final response = await http

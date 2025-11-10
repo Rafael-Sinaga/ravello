@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'order_page.dart';
 import '../widgets/navbar.dart';
+import 'verify_seller_page.dart';
+import 'onboarding.dart';
+
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -135,10 +138,14 @@ class ProfilePage extends StatelessWidget {
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 22),
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Arahkan ke halaman pendaftaran penjual
-                    Navigator.pushNamed(context, '/seller_register');
-                  },
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VerifySellerPage(),
+                    ),
+                  );
+                },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
                   label: const Text(
                     'Daftar sebagai Penjual',
@@ -235,7 +242,60 @@ class ProfilePage extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton.icon(
                     onPressed: () {
-                      // log out logic nanti di sini
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: const Text(
+                            'Konfirmasi Keluar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          content: const Text(
+                            'Apakah Anda yakin ingin keluar?',
+                            style: TextStyle(fontFamily: 'Poppins'),
+                          ),
+                          actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context), // Tutup pop-up
+                              child: const Text(
+                                'Kembali',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF124170),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const OnboardingPage(),
+                                  ),
+                                  (route) => false, // hapus semua halaman sebelumnya
+                                );
+                              },
+                              child: const Text(
+                                'Keluar',
+                                style: TextStyle(fontFamily: 'Poppins'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.logout_rounded, color: primaryColor),
                     label: const Text(
