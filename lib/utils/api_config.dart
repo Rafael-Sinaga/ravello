@@ -4,5 +4,3 @@ class ApiConfig {
   static const String baseUrl = "http://10.38.48.37:3000";
 }
 
-
-ABEL KONTOL
