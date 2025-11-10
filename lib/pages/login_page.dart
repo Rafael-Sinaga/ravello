@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart'; // ✅ auth logic
-import 'register_page.dart'; // ✅ ke halaman register
-import 'home_page.dart'; // ✅ redirect setelah login
+import '../services/auth_service.dart';
+import 'register_page.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,9 +25,15 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = false);
 
     if (result['success']) {
+      // ✅ Debug: pastikan data user tersimpan di AuthService.currentUser
+      print('Login berhasil! User saat ini: ${AuthService.currentUser?.name}');
+      print('Response data: ${result['data']}');
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login berhasil!')),
       );
+
+      // ✅ Arahkan ke HomePage setelah login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
@@ -65,11 +71,13 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: isLoading ? null : handleLogin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF124170),
-                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 80, vertical: 14),
               ),
               child: isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Login', style: TextStyle(color: Colors.white)),
+                  : const Text('Login',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
             const SizedBox(height: 20),
             TextButton(

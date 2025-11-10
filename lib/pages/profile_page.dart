@@ -1,19 +1,33 @@
-// lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'order_page.dart';
 import '../widgets/navbar.dart';
 import 'verify_seller_page.dart';
 import 'onboarding.dart';
+import '../services/auth_service.dart';
 
-
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // Debug: pastikan data user terbaca
+    print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
+  }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
     const Color lightBackground = Color(0xFFF8FBFD);
+
+    // Ambil data user yang sedang login dari AuthService
+    final user = AuthService.currentUser;
 
     return WillPopScope(
       onWillPop: () async {
@@ -82,8 +96,8 @@ class ProfilePage extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             'Halo,',
                             style: TextStyle(
                               color: Color(0xFF6F7A74),
@@ -91,16 +105,16 @@ class ProfilePage extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Budi Sigma',
-                            style: TextStyle(
+                            user?.name ?? 'Pengguna',
+                            style: const TextStyle(
                               color: primaryColor,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            'budisigma69@gmail.com',
-                            style: TextStyle(
+                            user?.email ?? 'Email tidak tersedia',
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,
                             ),
@@ -138,14 +152,14 @@ class ProfilePage extends StatelessWidget {
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 22),
                 child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VerifySellerPage(),
-                    ),
-                  );
-                },
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VerifySellerPage(),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
                   label: const Text(
                     'Daftar sebagai Penjual',
@@ -216,9 +230,7 @@ class ProfilePage extends StatelessWidget {
                       icon: Icons.notifications_none_rounded,
                       title: 'Notifikasi',
                       subtitle: 'Tinjau semua notifikasimu',
-                      onTap: () {
-                        // nanti diarahkan ke halaman notifikasi
-                      },
+                      onTap: () {},
                     ),
                     const Divider(height: 1),
                     _buildMenuItem(
@@ -259,10 +271,11 @@ class ProfilePage extends StatelessWidget {
                             'Apakah Anda yakin ingin keluar?',
                             style: TextStyle(fontFamily: 'Poppins'),
                           ),
-                          actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          actionsPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context), // Tutup pop-up
+                              onPressed: () => Navigator.pop(context),
                               child: const Text(
                                 'Kembali',
                                 style: TextStyle(
@@ -273,19 +286,21 @@ class ProfilePage extends StatelessWidget {
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF124170),
+                                backgroundColor: primaryColor,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                               onPressed: () {
+                                AuthService.logout(); // Hapus data user
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const OnboardingPage(),
+                                    builder: (context) =>
+                                        const OnboardingPage(),
                                   ),
-                                  (route) => false, // hapus semua halaman sebelumnya
+                                  (route) => false,
                                 );
                               },
                               child: const Text(
@@ -307,10 +322,10 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFB6C7D6), // abu kebiruan lembut
+                      backgroundColor: const Color(0xFFB6C7D6),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50), // pill shape
+                        borderRadius: BorderRadius.circular(50),
                         side: const BorderSide(color: primaryColor, width: 0.5),
                       ),
                     ),
