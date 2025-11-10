@@ -23,6 +23,7 @@ class AuthService {
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
+<<<<<<< HEAD
         final data = jsonDecode(response.body);
 
         // Simpan user ke variabel statis
@@ -35,6 +36,37 @@ class AuthService {
         print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
 
         return {'success': true, 'data': data};
+=======
+        final responseData = jsonDecode(response.body);
+
+        // Normalisasi struktur response:
+        // 1) jika backend mengembalikan { user: {...}, token: '...' }
+        // 2) jika backend mengembalikan user langsung atau menggunakan 'data'
+        dynamic user;
+        String? token;
+
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('user')) {
+            user = responseData['user'];
+          } else if (responseData.containsKey('data')) {
+            user = responseData['data'];
+          } else {
+            // fallback: mungkin responseData sendiri adalah user object
+            user = responseData;
+          }
+
+          token = responseData['token'] ??
+              (responseData['data'] is Map ? responseData['data']['token'] : null);
+        } else {
+          user = responseData;
+        }
+
+        return {
+          'success': true,
+          'user': user,
+          'token': token,
+        };
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
       } else {
         return {
           'success': false,

@@ -4,7 +4,11 @@ import 'order_page.dart';
 import '../widgets/navbar.dart';
 import 'verify_seller_page.dart';
 import 'onboarding.dart';
+<<<<<<< HEAD
 import '../services/auth_service.dart';
+=======
+import 'package:shared_preferences/shared_preferences.dart';
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,11 +18,32 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+<<<<<<< HEAD
   @override
   void initState() {
     super.initState();
     // Debug: pastikan data user terbaca
     print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
+=======
+  String _userName = 'Budi Sigma';
+  String _userEmail = 'budisigma69@gmail.com';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name');
+    final email = prefs.getString('user_email');
+
+    setState(() {
+      if (name != null && name.isNotEmpty) _userName = name;
+      if (email != null && email.isNotEmpty) _userEmail = email;
+    });
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
   }
 
   @override
@@ -105,7 +130,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Text(
+<<<<<<< HEAD
                             user?.name ?? 'Pengguna',
+=======
+                            _userName,
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                             style: const TextStyle(
                               color: primaryColor,
                               fontSize: 18,
@@ -113,7 +142,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Text(
+<<<<<<< HEAD
                             user?.email ?? 'Email tidak tersedia',
+=======
+                            _userEmail,
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 13,
@@ -181,7 +214,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              // === Judul Akun Saya ===
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
@@ -292,8 +324,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
+<<<<<<< HEAD
                               onPressed: () {
                                 AuthService.logout(); // Hapus data user
+=======
+                              onPressed: () async {
+                                // Hapus SharedPreferences saat logout
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.clear();
+
+>>>>>>> 2628f90e66f667a3b39c1309f133bc68785fc731
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
