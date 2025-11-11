@@ -51,12 +51,16 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
+    print("DEBUG: User di HomePage => ${user?.name}, ${user?.email}");
     final orderProvider = Provider.of<OrderProvider>(context);
     final cart = Provider.of<CartProvider>(context, listen: false);
 
     final hasPendingOrders = orderProvider.orders.any(
       (p) => orderProvider.getStatus(p) != 'Selesai',
     );
+
+      //final user = AuthService.currentUser;
+      print("DEBUG: User di HomePage => ${user?.name}, ${user?.email}");
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
