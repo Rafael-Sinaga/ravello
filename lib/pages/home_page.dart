@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   int currentPromo = 0;
   final PageController _promoController = PageController();
   Timer? _promoTimer;
+  String? selectedCategory;
 
   @override
   void initState() {
@@ -49,11 +50,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
-    final orderProvider = Provider.of<OrderProvider>(context);
     final user = AuthService.currentUser;
+    final orderProvider = Provider.of<OrderProvider>(context);
+    final cart = Provider.of<CartProvider>(context, listen: false);
 
-    // cek pesanan yang belum selesai
     final hasPendingOrders = orderProvider.orders.any(
       (p) => orderProvider.getStatus(p) != 'Selesai',
     );
@@ -111,8 +111,9 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    NotificationPage(orders: orderProvider.orders),
+                                builder: (context) => NotificationPage(
+                                  orders: orderProvider.orders,
+                                ),
                               ),
                             );
                           },
@@ -138,11 +139,14 @@ class _HomePageState extends State<HomePage> {
                     ),
                     IconButton(
                       onPressed: () {},
-                      icon: const Icon(Icons.settings_outlined,
-                          color: Color(0xFF124170)),
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        color: Color(0xFF124170),
+                      ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
 
                 // SEARCH BAR
@@ -172,6 +176,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
 
                 // KATEGORI
@@ -200,6 +205,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 12),
 
                 SizedBox(
@@ -212,12 +218,15 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(width: 8),
                         _buildCategoryCircle(Icons.directions_walk, 'Trail'),
                         _buildCategoryCircle(Icons.remove_red_eye, 'Kacamata'),
-                        _buildCategoryCircle(Icons.shopping_bag_outlined, 'Busana'),
+                        _buildCategoryCircle(
+                            Icons.shopping_bag_outlined, 'Busana'),
                         _buildCategoryCircle(Icons.phone_android, 'Elektronik'),
                         _buildCategoryCircle(Icons.home_outlined, 'Dekorasi'),
                         _buildCategoryCircle(Icons.kitchen, 'Perabot'),
                         _buildCategoryCircle(Icons.watch, 'Jam Tangan'),
                         _buildCategoryCircle(Icons.spa, 'Kecantikan'),
+                        _buildCategoryCircle(
+                            Icons.local_florist, 'Tanaman Hias'),
                         const SizedBox(width: 8),
                       ],
                     ),
@@ -229,33 +238,31 @@ class _HomePageState extends State<HomePage> {
                 // PROMO CAROUSEL
                 SizedBox(
                   height: 140,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: PageView(
-                      controller: _promoController,
-                      onPageChanged: (index) {
-                        setState(() => currentPromo = index);
-                      },
-                      children: [
-                        _buildPromoCard(
-                          'assets/images/sepatu.png',
-                          'Diskon Spesial 50%',
-                          'Dapatkan promo sepatu lokal terbaik minggu ini!',
-                        ),
-                        _buildPromoCard(
-                          'assets/images/Gelang_rajut.png',
-                          'Promo Aksesoris 30%',
-                          'Koleksi baru gelang rajut dengan harga hemat!',
-                        ),
-                        _buildPromoCard(
-                          'assets/images/Jersey.png',
-                          'Diskon Fashion 40%',
-                          'Tampil sporty dan stylish dengan produk lokal!',
-                        ),
-                      ],
-                    ),
+                  child: PageView(
+                    controller: _promoController,
+                    onPageChanged: (index) {
+                      setState(() => currentPromo = index);
+                    },
+                    children: [
+                      _buildPromoCard(
+                        'assets/images/sepatu.png',
+                        'Diskon Spesial 50%',
+                        'Dapatkan promo sepatu lokal terbaik minggu ini!',
+                      ),
+                      _buildPromoCard(
+                        'assets/images/Gelang_rajut.png',
+                        'Promo Aksesoris 30%',
+                        'Koleksi baru gelang rajut dengan harga hemat!',
+                      ),
+                      _buildPromoCard(
+                        'assets/images/Jersey.png',
+                        'Diskon Fashion 40%',
+                        'Tampil sporty dan stylish dengan produk lokal!',
+                      ),
+                    ],
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
                 // DOTS
@@ -306,6 +313,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 14),
 
                 GridView.builder(
@@ -321,9 +329,11 @@ class _HomePageState extends State<HomePage> {
                   itemCount: products.length,
                   itemBuilder: (context, index) {
                     final product = products[index];
-                    final hasDiscount = product.discount != null && product.discount! > 0;
-                    final discountedPrice = hasDiscount
-                        ? product.price - (product.price * (product.discount! / 100))
+                    final hasDiscount =
+                        product.discount != null && product.discount! > 0;
+                    final double discountedPrice = hasDiscount
+                        ? product.price -
+                            (product.price * (product.discount! / 100))
                         : product.price;
 
                     return GestureDetector(
@@ -350,13 +360,18 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                              child: Image.asset(
-                                product.imagePath,
-                                height: 120,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
+                            Hero(
+                              tag: product.imagePath,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                                child: Image.asset(
+                                  product.imagePath,
+                                  height: 120,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  filterQuality: FilterQuality.high,
+                                ),
                               ),
                             ),
                             Padding(
@@ -379,8 +394,10 @@ class _HomePageState extends State<HomePage> {
                                   SizedBox(
                                     height: 44,
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         if (hasDiscount) ...[
                                           Row(
@@ -390,7 +407,8 @@ class _HomePageState extends State<HomePage> {
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey,
-                                                  decoration: TextDecoration.lineThrough,
+                                                  decoration: TextDecoration
+                                                      .lineThrough,
                                                   fontFamily: 'Poppins',
                                                 ),
                                               ),
@@ -426,27 +444,33 @@ class _HomePageState extends State<HomePage> {
                                     child: OutlinedButton.icon(
                                       onPressed: () {
                                         cart.addToCart(product);
-                                        Future.delayed(Duration.zero, () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                '${product.name} berhasil ditambahkan ke keranjang',
-                                                style: const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              backgroundColor: const Color(0xFF124170),
-                                              behavior: SnackBarBehavior.floating,
-                                              duration: const Duration(seconds: 2),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              '${product.name} ditambahkan ke keranjang',
+                                              style: const TextStyle(
+                                                  fontFamily: 'Poppins'),
                                             ),
-                                          );
-                                        });
+                                            backgroundColor:
+                                                const Color(0xFF124170),
+                                            action: SnackBarAction(
+                                              label: 'Lihat',
+                                              textColor: Colors.white,
+                                              onPressed: () {
+                                                Navigator.pushNamed(
+                                                    context, '/cart');
+                                              },
+                                            ),
+                                          ),
+                                        );
                                       },
                                       style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Color(0xFF124170)),
+                                        side: const BorderSide(
+                                            color: Color(0xFF124170)),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 6, horizontal: 8),
@@ -475,6 +499,7 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                 ),
+
                 const SizedBox(height: 30),
               ],
             ),
@@ -485,21 +510,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategoryCircle(IconData icon, String label) {
+    final isSelected = selectedCategory == label;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: GestureDetector(
         onTap: () {
+          setState(() {
+            selectedCategory = label;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Kategori $label ditekan')),
+            SnackBar(content: Text('Kategori $label dipilih')),
           );
         },
         child: Column(
           children: [
-            Container(
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color:
+                    isSelected ? const Color(0xFF124170) : Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.grey.shade300, width: 1.5),
                 boxShadow: [
@@ -512,16 +544,18 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Icon(
                 icon,
-                color: const Color(0xFF124170),
+                color: isSelected ? Colors.white : const Color(0xFF124170),
                 size: 28,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 color: Colors.black87,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontFamily: 'Poppins',
               ),
             ),
@@ -532,60 +566,67 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPromoCard(String imagePath, String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF3A6188).withOpacity(0.25),
-            const Color(0xFF6F7A74).withOpacity(0.25),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-            child: Image.asset(
-              imagePath,
-              width: 110,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Promo "$title" diklik')));
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF3A6188).withOpacity(0.25),
+              const Color(0xFF6F7A74).withOpacity(0.25),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF124170),
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(12)),
+              child: Image.asset(
+                imagePath,
+                width: 110,
+                height: double.infinity,
+                fit: BoxFit.cover,
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF124170),
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
