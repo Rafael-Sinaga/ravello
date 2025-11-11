@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product_model.dart';
 import '../pages/detail_product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../widgets/navbar.dart';
 import '../pages/notification_page.dart';
+import '../services/auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,21 +21,10 @@ class _HomePageState extends State<HomePage> {
   final PageController _promoController = PageController();
   Timer? _promoTimer;
 
-  String _userName = 'Budi Sigma'; // fallback
-
   @override
   void initState() {
     super.initState();
     _startAutoScroll();
-    _loadUserName();
-  }
-
-  Future<void> _loadUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('user_name');
-    if (name != null && name.isNotEmpty) {
-      setState(() => _userName = name);
-    }
   }
 
   void _startAutoScroll() {
@@ -62,8 +51,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
+    final user = AuthService.currentUser;
 
-    // Cek apakah ada pesanan yang belum selesai → tampilkan titik merah di notifikasi
+    // cek pesanan yang belum selesai
     final hasPendingOrders = orderProvider.orders.any(
       (p) => orderProvider.getStatus(p) != 'Selesai',
     );
@@ -95,7 +85,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Halo, $_userName',
+                            'Halo, ${user?.name ?? "Pengguna"}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -121,8 +111,8 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                               builder: (context) => NotificationPage(orders: orderProvider.orders),
-
+                                builder: (context) =>
+                                    NotificationPage(orders: orderProvider.orders),
                               ),
                             );
                           },
@@ -138,8 +128,8 @@ class _HomePageState extends State<HomePage> {
                             child: Container(
                               width: 10,
                               height: 10,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF124170),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF124170),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -228,7 +218,6 @@ class _HomePageState extends State<HomePage> {
                         _buildCategoryCircle(Icons.kitchen, 'Perabot'),
                         _buildCategoryCircle(Icons.watch, 'Jam Tangan'),
                         _buildCategoryCircle(Icons.spa, 'Kecantikan'),
-                        _buildCategoryCircle(Icons.local_florist, 'Dekorasi'),
                         const SizedBox(width: 8),
                       ],
                     ),
@@ -333,7 +322,7 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final product = products[index];
                     final hasDiscount = product.discount != null && product.discount! > 0;
-                    final double discountedPrice = hasDiscount
+                    final discountedPrice = hasDiscount
                         ? product.price - (product.price * (product.discount! / 100))
                         : product.price;
 
@@ -362,8 +351,7 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ClipRRect(
-                              borderRadius:
-                                  const BorderRadius.vertical(top: Radius.circular(12)),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                               child: Image.asset(
                                 product.imagePath,
                                 height: 120,
@@ -402,8 +390,8 @@ class _HomePageState extends State<HomePage> {
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey,
-                                                  fontFamily: 'Poppins',
                                                   decoration: TextDecoration.lineThrough,
+                                                  fontFamily: 'Poppins',
                                                 ),
                                               ),
                                               const SizedBox(width: 6),
