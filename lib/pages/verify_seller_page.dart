@@ -70,10 +70,13 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       return;
     }
 
-    if (nameController.text.isEmpty || nikController.text.isEmpty || ktpImage == null) {
+    if (nameController.text.isEmpty ||
+        nikController.text.isEmpty ||
+        ktpImage == null ||
+        faceImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Harap lengkapi semua data sebelum lanjut.'),
+          content: Text('Harap lengkapi semua data sebelum konfirmasi.'),
         ),
       );
       return;
@@ -106,153 +109,192 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Jenis Usaha',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Row(
-              children: [
-                Expanded(
-                  child: RadioListTile<String>(
-                    title: const Text('Perorangan'),
-                    value: 'Perorangan',
-                    groupValue: businessType,
-                    onChanged: (val) => setState(() => businessType = val!),
-                  ),
-                ),
-                Expanded(
-                  child: RadioListTile<String>(
-                    title: const Text('Perusahaan (PT/CV)'),
-                    value: 'Perusahaan',
-                    groupValue: businessType,
-                    onChanged: (val) => setState(() => businessType = val!),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              maxLength: 50,
-              decoration: const InputDecoration(
-                labelText: 'Nama',
-                hintText: 'Masukkan nama',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nikController,
-              maxLength: 16,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'NIK',
-                hintText: 'Masukkan NIK',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Foto KTP',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => _showImagePickerDialog(),
-              child: Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                  image: ktpImage != null
-                      ? DecorationImage(
-                          image: FileImage(ktpImage!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: ktpImage == null
-                    ? const Center(
-                        child: Icon(Icons.camera_alt_outlined,
-                            size: 40, color: Colors.grey),
-                      )
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pastikan seluruh KTP berada dalam bingkai, info terlihat jelas, tidak buram.',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Verifikasi Wajah',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: faceImage != null
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: ClipOval(
-                        child: Image.file(faceImage!,
-                            width: 80, height: 80, fit: BoxFit.cover),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Jenis Usaha',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                    )
-                  : null,
-              trailing: ElevatedButton(
-                onPressed: _verifyFace,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700),
-                child: const Text('Verifikasi Sekarang'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            CheckboxListTile(
-              title: const Text.rich(
-                TextSpan(
-                  text: 'Saya menyetujui ',
-                  children: [
-                    TextSpan(
-                        text: 'Syarat & Ketentuan',
-                        style: TextStyle(color: Colors.blue))
-                  ],
-                ),
-              ),
-              value: agreeTerms,
-              onChanged: (val) => setState(() => agreeTerms = val ?? false),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Dengan melengkapi formulir ini, Penjual menyetujui bahwa:\n'
-              '• Informasi yang diberikan benar dan dapat diperbarui.\n'
-              '• Penjual memiliki hak dan kewenangan untuk menjual produk.\n'
-              '• Transaksi dianggap sah sesuai perjanjian yang berlaku.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Kembali'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Perorangan'),
+                              value: 'Perorangan',
+                              groupValue: businessType,
+                              onChanged: (val) =>
+                                  setState(() => businessType = val!),
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Perusahaan (PT/CV)'),
+                              value: 'Perusahaan',
+                              groupValue: businessType,
+                              onChanged: (val) =>
+                                  setState(() => businessType = val!),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameController,
+                        maxLength: 50,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama',
+                          hintText: 'Masukkan nama',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nikController,
+                        maxLength: 16,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'NIK',
+                          hintText: 'Masukkan NIK',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Foto KTP',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _showImagePickerDialog(),
+                        child: Container(
+                          height: 140,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                            image: ktpImage != null
+                                ? DecorationImage(
+                                    image: FileImage(ktpImage!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: ktpImage == null
+                              ? const Center(
+                                  child: Icon(Icons.camera_alt_outlined,
+                                      size: 40, color: Colors.grey),
+                                )
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Pastikan seluruh KTP berada dalam bingkai, info terlihat jelas, tidak buram.',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Verifikasi Wajah',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          faceImage != null
+                              ? ClipOval(
+                                  child: Image.file(
+                                    faceImage!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.grey),
+                                  ),
+                                  child: const Icon(Icons.person_outline,
+                                      color: Colors.grey, size: 40),
+                                ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _verifyFace,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                              ),
+                              child: const Text('Verifikasi Sekarang'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      CheckboxListTile(
+                        title: const Text.rich(
+                          TextSpan(
+                            text: 'Saya menyetujui ',
+                            children: [
+                              TextSpan(
+                                text: 'Syarat & Ketentuan',
+                                style: TextStyle(color: Colors.blue),
+                              ),
+                            ],
+                          ),
+                        ),
+                        value: agreeTerms,
+                        onChanged: (val) =>
+                            setState(() => agreeTerms = val ?? false),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Dengan melengkapi formulir ini, Penjual menyetujui bahwa:\n'
+                        '• Informasi yang diberikan benar dan dapat diperbarui.\n'
+                        '• Penjual memiliki hak dan kewenangan untuk menjual produk.\n'
+                        '• Transaksi dianggap sah sesuai perjanjian yang berlaku.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Kembali'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: agreeTerms ? _submitVerification : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: agreeTerms
+                                    ? Colors.blue.shade700
+                                    : Colors.grey.shade400,
+                              ),
+                              child: const Text('Konfirmasi'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _submitVerification,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                    ),
-                    child: const Text('Lanjut'),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
