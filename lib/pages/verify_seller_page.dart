@@ -17,45 +17,60 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   bool agreeTerms = false;
   File? ktpImage;
   File? faceImage;
-
   final ImagePicker picker = ImagePicker();
 
   Future<void> _pickKtpImage() async {
-    final XFile? pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
-    if (pickedFile != null) {
-      setState(() {
-        ktpImage = File(pickedFile.path);
-      });
+    try {
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (pickedFile != null && mounted) {
+        setState(() {
+          ktpImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking KTP image: $e");
     }
   }
 
   Future<void> _takeKtpPhoto() async {
-    final XFile? capturedFile = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
-    if (capturedFile != null) {
-      setState(() {
-        ktpImage = File(capturedFile.path);
-      });
+    try {
+      final XFile? capturedFile = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+      if (capturedFile != null && mounted) {
+        setState(() {
+          ktpImage = File(capturedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error capturing KTP photo: $e");
     }
   }
 
   Future<void> _verifyFace() async {
-    final XFile? capturedFile = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 90,
-      preferredCameraDevice: CameraDevice.front,
-    );
-    if (capturedFile != null) {
-      setState(() {
-        faceImage = File(capturedFile.path);
-      });
+    try {
+      final XFile? capturedFile = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+        preferredCameraDevice: CameraDevice.front,
+      );
+      if (capturedFile != null && mounted) {
+        setState(() {
+          faceImage = File(capturedFile.path);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Verifikasi wajah berhasil dilakukan.')),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error verifying face: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verifikasi wajah berhasil dilakukan.')),
+        const SnackBar(
+            content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
       );
     }
   }
@@ -87,9 +102,41 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     );
   }
 
+  void _showImagePickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickKtpImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Ambil Foto'),
+              onTap: () {
+                Navigator.pop(context);
+                _takeKtpPhoto();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFF124170); // biru navy
+    final Color backgroundColor = const Color(0xFFF8FDFA); // putih kehijauan
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
           'Verifikasi Data Diri',
@@ -113,7 +160,9 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         builder: (context, constraints) {
           return SingleChildScrollView(
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
               child: IntrinsicHeight(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -122,7 +171,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                     children: [
                       const Text(
                         'Jenis Usaha',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Row(
                         children: [
@@ -170,7 +220,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                       const SizedBox(height: 16),
                       const Text(
                         'Foto KTP',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       GestureDetector(
@@ -198,47 +249,42 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Pastikan seluruh KTP berada dalam bingkai, info terlihat jelas, tidak buram.',
+                        'Pastikan seluruh KTP terlihat jelas dan tidak buram.',
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Verifikasi Wajah',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          faceImage != null
-                              ? ClipOval(
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Verifikasi Wajah',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: faceImage != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: ClipOval(
                                   child: Image.file(
                                     faceImage!,
                                     width: 80,
                                     height: 80,
                                     fit: BoxFit.cover,
                                   ),
-                                )
-                              : Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.grey),
-                                  ),
-                                  child: const Icon(Icons.person_outline,
-                                      color: Colors.grey, size: 40),
                                 ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _verifyFace,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
+                              )
+                            : const Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Ambil foto wajah Anda untuk verifikasi.',
+                                  style: TextStyle(
+                                      fontSize: 13, color: Colors.grey),
+                                ),
                               ),
-                              child: const Text('Verifikasi Sekarang'),
-                            ),
-                          ),
-                        ],
+                        trailing: ElevatedButton(
+                          onPressed: _verifyFace,
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor),
+                          child: const Text('Verifikasi Sekarang'),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       CheckboxListTile(
@@ -247,9 +293,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                             text: 'Saya menyetujui ',
                             children: [
                               TextSpan(
-                                text: 'Syarat & Ketentuan',
-                                style: TextStyle(color: Colors.blue),
-                              ),
+                                  text: 'Syarat & Ketentuan',
+                                  style: TextStyle(color: Colors.blue))
                             ],
                           ),
                         ),
@@ -277,11 +322,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: agreeTerms ? _submitVerification : null,
+                              onPressed: agreeTerms
+                                  ? _submitVerification
+                                  : null, // hanya aktif setelah setuju
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: agreeTerms
-                                    ? Colors.blue.shade700
-                                    : Colors.grey.shade400,
+                                backgroundColor: primaryColor,
                               ),
                               child: const Text('Konfirmasi'),
                             ),
@@ -295,34 +340,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showImagePickerDialog() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Pilih dari Galeri'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickKtpImage();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Ambil Foto'),
-              onTap: () {
-                Navigator.pop(context);
-                _takeKtpPhoto();
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
