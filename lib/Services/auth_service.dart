@@ -31,8 +31,12 @@ class AuthService {
 
         token = data['token'];
 
-        if (data['user'] != null) {
-          currentUser = UserModel.fromJson(data['user']);
+        if (data['name'] != null && data['email'] != null) {
+          currentUser = UserModel(
+            id: int.tryParse(data['client_id'].toString()) ?? 0,
+            name: data['name'],
+            email: data['email'],
+          );
         } else {
           currentUser = null;
         }
