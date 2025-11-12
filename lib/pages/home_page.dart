@@ -59,9 +59,6 @@ class _HomePageState extends State<HomePage> {
       (p) => orderProvider.getStatus(p) != 'Selesai',
     );
 
-      //final user = AuthService.currentUser;
-      print("DEBUG: User di HomePage => ${user?.name}, ${user?.email}");
-
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       bottomNavigationBar: const Navbar(currentIndex: 0),
@@ -326,7 +323,7 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.80, // ✅ lebih proporsional
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -371,35 +368,35 @@ class _HomePageState extends State<HomePage> {
                                     top: Radius.circular(12)),
                                 child: Image.asset(
                                   product.imagePath,
-                                  height: 120,
+                                  height:
+                                      90, // ✅ ukuran dikembalikan seperti semula
                                   width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  filterQuality: FilterQuality.high,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.medium,
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    product.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                      fontFamily: 'Poppins',
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      product.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                        fontFamily: 'Poppins',
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  SizedBox(
-                                    height: 44,
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                    const SizedBox(height: 4),
+                                    Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
@@ -441,60 +438,60 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () {
-                                        cart.addToCart(product);
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              '${product.name} ditambahkan ke keranjang',
-                                              style: const TextStyle(
-                                                  fontFamily: 'Poppins'),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () {
+                                          cart.addToCart(product);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${product.name} ditambahkan ke keranjang',
+                                                style: const TextStyle(
+                                                    fontFamily: 'Poppins'),
+                                              ),
+                                              backgroundColor:
+                                                  const Color(0xFF124170),
+                                              action: SnackBarAction(
+                                                label: 'Lihat',
+                                                textColor: Colors.white,
+                                                onPressed: () {
+                                                  Navigator.pushNamed(
+                                                      context, '/cart');
+                                                },
+                                              ),
                                             ),
-                                            backgroundColor:
-                                                const Color(0xFF124170),
-                                            action: SnackBarAction(
-                                              label: 'Lihat',
-                                              textColor: Colors.white,
-                                              onPressed: () {
-                                                Navigator.pushNamed(
-                                                    context, '/cart');
-                                              },
-                                            ),
+                                          );
+                                        },
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(
+                                              color: Color(0xFF124170)),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
-                                        );
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(
-                                            color: Color(0xFF124170)),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 6, horizontal: 8),
                                         ),
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 6, horizontal: 8),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.shopping_bag_outlined,
-                                        size: 14,
-                                        color: Color(0xFF124170),
-                                      ),
-                                      label: const Text(
-                                        'Tambah',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontFamily: 'Poppins',
+                                        icon: const Icon(
+                                          Icons.shopping_bag_outlined,
+                                          size: 14,
                                           color: Color(0xFF124170),
+                                        ),
+                                        label: const Text(
+                                          'Tambah',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontFamily: 'Poppins',
+                                            color: Color(0xFF124170),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -534,8 +531,7 @@ class _HomePageState extends State<HomePage> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color:
-                    isSelected ? const Color(0xFF124170) : Colors.white,
+                color: isSelected ? const Color(0xFF124170) : Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.grey.shade300, width: 1.5),
                 boxShadow: [

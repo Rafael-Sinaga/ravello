@@ -26,7 +26,6 @@ class _ProfilePageState extends State<ProfilePage> {
     const Color primaryColor = Color(0xFF124170);
     const Color lightBackground = Color(0xFFF8FBFD);
 
-    // Ambil data user yang sedang login dari AuthService
     final user = AuthService.currentUser;
 
     return WillPopScope(
@@ -123,9 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     InkWell(
-                      onTap: () {
-                        // nanti bisa diarahkan ke halaman edit profil
-                      },
+                      onTap: () {},
                       child: Row(
                         children: const [
                           Text(
@@ -253,63 +250,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: TextButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          title: const Text(
-                            'Konfirmasi Keluar',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                          content: const Text(
-                            'Apakah Anda yakin ingin keluar?',
-                            style: TextStyle(fontFamily: 'Poppins'),
-                          ),
-                          actionsPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text(
-                                'Kembali',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: () {
-                                AuthService.logout(); // Hapus data user
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const OnboardingPage(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                              child: const Text(
-                                'Keluar',
-                                style: TextStyle(fontFamily: 'Poppins'),
-                              ),
-                            ),
-                          ],
+                    onPressed: () async {
+                      await AuthService.logout(); // sudah dijamin aman
+                      if (!mounted) return;
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const OnboardingPage(),
                         ),
+                        (route) => false,
                       );
                     },
                     icon: const Icon(Icons.logout_rounded, color: primaryColor),

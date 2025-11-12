@@ -8,12 +8,12 @@ class FavoritePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> favorites = [
       {
-        'image': 'assets/images/product1.png',
-        'title': 'Kemeja Batik Elegan',
+        'image': 'assets/images/Rolex_KW.png',
+        'title': 'Rolex KW',
         'price': 175000,
       },
       {
-        'image': 'assets/images/product2.png',
+        'image': 'assets/images/Gelang_Rajut.png',
         'title': 'Gelang Anyaman Rotan',
         'price': 85000,
       },

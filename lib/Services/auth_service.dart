@@ -1,15 +1,17 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/api_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   static const Duration _timeoutDuration = Duration(seconds: 10);
-  static UserModel? currentUser; // Menyimpan data user yang sedang login
-  static String? token; // Menyimpan token JWT
+  static UserModel? currentUser;
+  static String? token;
 
   /// 🔑 LOGIN
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
 
     try {
@@ -27,17 +29,16 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // ✅ Ambil token JWT
         token = data['token'];
 
-        // ✅ Ambil data user dari response JSON
         if (data['user'] != null) {
           currentUser = UserModel.fromJson(data['user']);
         } else {
           currentUser = null;
         }
 
-        print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
+        print(
+            'User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
         print('Token JWT: $token');
 
         return {'success': true, 'data': data};
@@ -80,7 +81,8 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': 'Registrasi gagal (${response.statusCode}): ${response.body}',
+          'message':
+              'Registrasi gagal (${response.statusCode}): ${response.body}',
         };
       }
     } catch (e) {
@@ -89,8 +91,25 @@ class AuthService {
   }
 
   /// 🚪 LOGOUT
-  static void logout() {
-    currentUser = null;
-    token = null;
+  static Future<void> logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      if (prefs.containsKey('current_user')) {
+        await prefs.remove('current_user');
+      }
+      if (prefs.containsKey('auth_token')) {
+        await prefs.remove('auth_token');
+      }
+
+      currentUser = null;
+      token = null;
+
+      print('AuthService: logout sukses — data user dihapus.');
+    } catch (e) {
+      print('AuthService.logout error: $e');
+      currentUser = null;
+      token = null;
+    }
   }
 }

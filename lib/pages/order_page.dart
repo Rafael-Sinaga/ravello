@@ -124,6 +124,7 @@ class _OrderPageState extends State<OrderPage> {
                     ],
                   ),
                   child: ListTile(
+                    isThreeLine: true, // memberi ruang vertikal tambahan
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     leading: ClipRRect(
@@ -143,38 +144,43 @@ class _OrderPageState extends State<OrderPage> {
                         color: Color(0xFF124170),
                       ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          status,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        if (isActiveOrder && status != 'Selesai') ...[
-                          const SizedBox(height: 2),
+                    // --- Bagian yang diperbaiki ---
+                    subtitle: Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 4),
                           Text(
-                            'Waktu tersisa: ${_formatTime(_remainingSeconds)}',
-                            style: const TextStyle(
-                              fontSize: 12,
+                            status,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (isActiveOrder && status != 'Selesai') ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Waktu tersisa: ${_formatTime(_remainingSeconds)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6F7D8D),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 2),
+                          const Text(
+                            '2 November 2025',
+                            style: TextStyle(
                               color: Color(0xFF6F7D8D),
+                              fontSize: 12,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 2),
-                        const Text(
-                          '2 November 2025',
-                          style: TextStyle(
-                            color: Color(0xFF6F7D8D),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
+                    // --- End perbaikan ---
                     trailing: Text(
                       'Rp${order.price.toStringAsFixed(0)}',
                       style: const TextStyle(

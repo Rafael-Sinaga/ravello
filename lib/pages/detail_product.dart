@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
-import 'checkout_page.dart'; // <--- tambahkan ini
 
 class DetailProduct extends StatefulWidget {
   final Product product;
@@ -14,395 +13,321 @@ class DetailProduct extends StatefulWidget {
 }
 
 class _DetailProductState extends State<DetailProduct> {
-  String? selectedSize; // ukuran yang dipilih user
+  String? selectedSize; // ✅ untuk menyimpan ukuran yang dipilih
+  int currentImageIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
-    final bool hasDiscount = product.discount != null && product.discount! > 0;
-    final double discountedPrice = hasDiscount
-        ? product.price - (product.price * product.discount! / 100)
-        : product.price;
+    final cartProvider = Provider.of<CartProvider>(context);
+
+    final hasDiscount =
+        widget.product.discount != null && widget.product.discount! > 0;
+    final discountedPrice = hasDiscount
+        ? widget.product.price -
+            (widget.product.price * (widget.product.discount! / 100))
+        : widget.product.price;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Bagian atas
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFE8EEF3),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFF124170)),
-                      onPressed: () => Navigator.pop(context),
+      backgroundColor: const Color(0xFFF8FBFD),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF124170)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.product.name,
+          style: const TextStyle(
+            color: Color(0xFF124170),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Color(0xFF124170)),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ✅ GAMBAR PRODUK
+              Center(
+                child: Hero(
+                  tag: widget.product.imagePath,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      widget.product.imagePath,
+                      height: 180,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        product.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ),
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFE8EEF3),
-                    child: IconButton(
-                      icon: const Icon(Icons.share, color: Color(0xFF124170)),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fitur bagikan belum diimplementasikan'),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
 
-            // Konten utama
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // DOTS indikator (jika kamu ingin multi-gambar di masa depan)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  3,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    height: 6,
+                    width: currentImageIndex == index ? 16 : 6,
+                    decoration: BoxDecoration(
+                      color: currentImageIndex == index
+                          ? const Color(0xFF124170)
+                          : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ✅ NAMA & HARGA
+              Text(
+                widget.product.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF124170),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 4),
+              if (hasDiscount)
+                Row(
                   children: [
-                    // Gambar produk
-                    Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 250),
-                            child: Image.asset(
-                              product.imagePath,
-                              width: double.infinity,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const SizedBox(
-                                  height: 250,
-                                  child: Center(
-                                    child: Icon(Icons.broken_image,
-                                        size: 100, color: Colors.grey),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              3,
-                              (index) => Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 3),
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: index == 0
-                                      ? const Color(0xFF124170)
-                                      : Colors.grey[400],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Rp ${_formatPrice(widget.product.price)}',
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                        decoration: TextDecoration.lineThrough,
+                        fontFamily: 'Poppins',
+                      ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // Nama produk
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          product.name,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 2,
+                        horizontal: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '-${widget.product.discount!.toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins',
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 8),
-
-                    // ===== Harga (konsisten tinggi area) =====
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SizedBox(
-                        height: 56, // cukup untuk menampung harga lama + diskon + spacing
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (hasDiscount)
-                              Row(
-                                children: [
-                                  Text(
-                                    'Rp ${product.price.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 15,
-                                      color: Colors.grey,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade100,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '-${product.discount!.toStringAsFixed(0)}%',
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 13,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Rp ${discountedPrice.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF124170),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ====== Tambahan: Pilihan Ukuran ======
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Pilih Ukuran',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 10,
-                            children: ['S', 'M', 'L', 'XL'].map((size) {
-                              final bool isSelected = selectedSize == size;
-                              return ChoiceChip(
-                                label: Text(
-                                  size,
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w500,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : const Color(0xFF124170),
-                                  ),
-                                ),
-                                selected: isSelected,
-                                selectedColor: const Color(0xFF124170),
-                                backgroundColor: const Color(0xFFE8EEF3),
-                                onSelected: (_) {
-                                  setState(() => selectedSize = size);
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // ====== End Tambahan ======
-
-                    const SizedBox(height: 20),
-
-                    // Deskripsi
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Deskripsi',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            product.description,
-                            textAlign: TextAlign.left,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15,
-                              color: Colors.black87,
-                              height: 1.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
                   ],
+                ),
+              const SizedBox(height: 4),
+              Text(
+                'Rp ${_formatPrice(discountedPrice)}',
+                style: const TextStyle(
+                  color: Color(0xFF124170),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ✅ PILIH UKURAN (INTERAKTIF)
+              const Text(
+                'Pilih Ukuran',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                children: ['S', 'M', 'L', 'XL'].map((size) {
+                  final isSelected = selectedSize == size;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => selectedSize = size);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF124170)
+                            : Colors.white,
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF124170)
+                              : Colors.grey.shade300,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.blue.shade100,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : [],
+                      ),
+                      child: Text(
+                        size,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'Poppins',
+                          color:
+                              isSelected ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // ✅ DESKRIPSI
+              const Text(
+                'Deskripsi',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.product.description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                  height: 1.5,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 90), // jarak agar tombol tidak ketutup
+            ],
+          ),
+        ),
+      ),
+
+      // ✅ TOMBOL AKSI BAWAH
+      bottomNavigationBar: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  if (selectedSize == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Pilih ukuran terlebih dahulu!',
+                          style: TextStyle(fontFamily: 'Poppins'),
+                        ),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+
+                  cartProvider.addToCart(widget.product);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${widget.product.name} (${selectedSize!}) ditambahkan ke keranjang',
+                        style: const TextStyle(fontFamily: 'Poppins'),
+                      ),
+                      backgroundColor: const Color(0xFF124170),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF124170),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text(
+                  'Tambah ke Keranjang',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-
-            // Tombol bawah
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    offset: const Offset(0, -1),
-                    blurRadius: 6,
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF124170)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Tombol Tambah ke Keranjang
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (selectedSize == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Silakan pilih ukuran terlebih dahulu'),
-                            ),
-                          );
-                          return;
-                        }
-                        final cart =
-                            Provider.of<CartProvider>(context, listen: false);
-                        cart.addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF124170),
-                            content: Text(
-                              '${product.name} ukuran $selectedSize berhasil ditambahkan ke keranjang!',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF124170),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text(
-                        'Tambah ke Keranjang',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text(
+                  'Checkout',
+                  style: TextStyle(
+                    color: Color(0xFF124170),
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 10),
-
-                  // Tombol Checkout
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        if (selectedSize == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Silakan pilih ukuran terlebih dahulu'),
-                            ),
-                          );
-                          return;
-                        }
-                        final cart =
-                            Provider.of<CartProvider>(context, listen: false);
-                        cart.addToCart(product);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CheckoutPage(),
-                          ),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB0C0CF),
-                        side: const BorderSide(
-                            color: Color(0xFF124170), width: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text(
-                        'Checkout',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF124170),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatPrice(num price) {
+    final int value = price.round();
+    final s = value.toString();
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = s.length - 1; i >= 0; i--) {
+      buffer.write(s[i]);
+      count++;
+      if (count == 3 && i != 0) {
+        buffer.write('.');
+        count = 0;
+      }
+    }
+    return buffer.toString().split('').reversed.join('');
   }
 }
