@@ -55,7 +55,7 @@ class SellerDashboardPage extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(50),
                     child: Image.asset(
-                      'assets/images/store_profile.png',
+                      'assets/images/Profile.png',
                       width: 70,
                       height: 70,
                       fit: BoxFit.cover,

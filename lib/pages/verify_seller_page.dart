@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
+import 'seller_dashboard.dart'; // ✅ Tambahan: import halaman dashboard penjual
 
 class VerifySellerPage extends StatefulWidget {
   const VerifySellerPage({super.key});
@@ -15,9 +17,10 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController nikController = TextEditingController();
   bool agreeTerms = false;
-  File? ktpImage;
-  File? faceImage;
+  XFile? ktpImage;
+  XFile? faceImage;
   final ImagePicker picker = ImagePicker();
+  bool isLoading = false; // ✅ Tambahan: untuk indikator loading
 
   Future<void> _pickKtpImage() async {
     try {
@@ -27,7 +30,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       );
       if (pickedFile != null && mounted) {
         setState(() {
-          ktpImage = File(pickedFile.path);
+          ktpImage = pickedFile;
         });
       }
     } catch (e) {
@@ -43,7 +46,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       );
       if (capturedFile != null && mounted) {
         setState(() {
-          ktpImage = File(capturedFile.path);
+          ktpImage = capturedFile;
         });
       }
     } catch (e) {
@@ -60,7 +63,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       );
       if (capturedFile != null && mounted) {
         setState(() {
-          faceImage = File(capturedFile.path);
+          faceImage = capturedFile;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Verifikasi wajah berhasil dilakukan.')),
@@ -75,7 +78,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     }
   }
 
-  void _submitVerification() {
+  Future<void> _submitVerification() async {
     if (!agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -97,9 +100,25 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Data berhasil dikirim untuk verifikasi.')),
-    );
+    setState(() => isLoading = true);
+
+    // ✅ Simulasi proses verifikasi 2 detik biar lebih smooth
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (mounted) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verifikasi berhasil!')),
+      );
+
+      // ✅ Langsung arahkan ke Seller Dashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SellerDashboardPage(),
+        ),
+      );
+    }
   }
 
   void _showImagePickerDialog() {
@@ -132,8 +151,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF124170); // biru navy
-    final Color backgroundColor = const Color(0xFFF8FDFA); // putih kehijauan
+    final Color primaryColor = const Color(0xFF124170);
+    final Color backgroundColor = const Color(0xFFF8FDFA);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -156,190 +175,214 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
           ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Jenis Usaha',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Row(
+      body: Stack(
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Perorangan'),
-                              value: 'Perorangan',
-                              groupValue: businessType,
-                              onChanged: (val) =>
-                                  setState(() => businessType = val!),
-                            ),
+                          const Text(
+                            'Jenis Usaha',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
                           ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Perusahaan (PT/CV)'),
-                              value: 'Perusahaan',
-                              groupValue: businessType,
-                              onChanged: (val) =>
-                                  setState(() => businessType = val!),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: nameController,
-                        maxLength: 50,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama',
-                          hintText: 'Masukkan nama',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: nikController,
-                        maxLength: 16,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'NIK',
-                          hintText: 'Masukkan NIK',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Foto KTP',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: () => _showImagePickerDialog(),
-                        child: Container(
-                          height: 140,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(8),
-                            image: ktpImage != null
-                                ? DecorationImage(
-                                    image: FileImage(ktpImage!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: ktpImage == null
-                              ? const Center(
-                                  child: Icon(Icons.camera_alt_outlined,
-                                      size: 40, color: Colors.grey),
-                                )
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Pastikan seluruh KTP terlihat jelas dan tidak buram.',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                      const SizedBox(height: 20),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Verifikasi Wajah',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: faceImage != null
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: ClipOval(
-                                  child: Image.file(
-                                    faceImage!,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              )
-                            : const Padding(
-                                padding: EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  'Ambil foto wajah Anda untuk verifikasi.',
-                                  style: TextStyle(
-                                      fontSize: 13, color: Colors.grey),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: RadioListTile<String>(
+                                  title: const Text('Perorangan'),
+                                  value: 'Perorangan',
+                                  groupValue: businessType,
+                                  onChanged: (val) =>
+                                      setState(() => businessType = val!),
                                 ),
                               ),
-                        trailing: ElevatedButton(
-                          onPressed: _verifyFace,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor),
-                          child: const Text('Verifikasi Sekarang'),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      CheckboxListTile(
-                        title: const Text.rich(
-                          TextSpan(
-                            text: 'Saya menyetujui ',
-                            children: [
-                              TextSpan(
-                                  text: 'Syarat & Ketentuan',
-                                  style: TextStyle(color: Colors.blue))
+                              Expanded(
+                                child: RadioListTile<String>(
+                                  title: const Text('Perusahaan (PT/CV)'),
+                                  value: 'Perusahaan',
+                                  groupValue: businessType,
+                                  onChanged: (val) =>
+                                      setState(() => businessType = val!),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                        value: agreeTerms,
-                        onChanged: (val) =>
-                            setState(() => agreeTerms = val ?? false),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Dengan melengkapi formulir ini, Penjual menyetujui bahwa:\n'
-                        '• Informasi yang diberikan benar dan dapat diperbarui.\n'
-                        '• Penjual memiliki hak dan kewenangan untuk menjual produk.\n'
-                        '• Transaksi dianggap sah sesuai perjanjian yang berlaku.',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Kembali'),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: nameController,
+                            maxLength: 50,
+                            decoration: const InputDecoration(
+                              labelText: 'Nama',
+                              hintText: 'Masukkan nama',
+                              border: OutlineInputBorder(),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: agreeTerms
-                                  ? _submitVerification
-                                  : null, // hanya aktif setelah setuju
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                              ),
-                              child: const Text('Konfirmasi'),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: nikController,
+                            maxLength: 16,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'NIK',
+                              hintText: 'Masukkan NIK',
+                              border: OutlineInputBorder(),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Foto KTP',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: _showImagePickerDialog,
+                            child: Container(
+                              height: 140,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                                image: ktpImage != null
+                                    ? DecorationImage(
+                                        image: kIsWeb
+                                            ? NetworkImage(ktpImage!.path)
+                                            : FileImage(File(ktpImage!.path))
+                                                as ImageProvider,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: ktpImage == null
+                                  ? const Center(
+                                      child: Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 40,
+                                          color: Colors.grey),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Pastikan seluruh KTP terlihat jelas dan tidak buram.',
+                            style:
+                                TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                          const SizedBox(height: 20),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Verifikasi Wajah',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: faceImage != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: ClipOval(
+                                      child: kIsWeb
+                                          ? Image.network(
+                                              faceImage!.path,
+                                              width: 80,
+                                              height: 80,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Image.file(
+                                              File(faceImage!.path),
+                                              width: 80,
+                                              height: 80,
+                                              fit: BoxFit.cover,
+                                            ),
+                                    ),
+                                  )
+                                : const Padding(
+                                    padding: EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      'Ambil foto wajah Anda untuk verifikasi.',
+                                      style: TextStyle(
+                                          fontSize: 13, color: Colors.grey),
+                                    ),
+                                  ),
+                            trailing: ElevatedButton(
+                              onPressed: _verifyFace,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor),
+                              child: const Text('Verifikasi Sekarang'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          CheckboxListTile(
+                            title: const Text.rich(
+                              TextSpan(
+                                text: 'Saya menyetujui ',
+                                children: [
+                                  TextSpan(
+                                      text: 'Syarat & Ketentuan',
+                                      style: TextStyle(color: Colors.blue))
+                                ],
+                              ),
+                            ),
+                            value: agreeTerms,
+                            onChanged: (val) =>
+                                setState(() => agreeTerms = val ?? false),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Dengan melengkapi formulir ini, Penjual menyetujui bahwa:\n'
+                            '• Informasi yang diberikan benar dan dapat diperbarui.\n'
+                            '• Penjual memiliki hak dan kewenangan untuk menjual produk.\n'
+                            '• Transaksi dianggap sah sesuai perjanjian yang berlaku.',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Kembali'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed:
+                                      agreeTerms ? _submitVerification : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                  ),
+                                  child: const Text('Konfirmasi'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+
+          // ✅ Loading overlay saat proses verifikasi
+          if (isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
               ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
