@@ -329,17 +329,39 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: TextButton.icon(
-                    onPressed: () async {
-                      await AuthService.logout(); // sudah dijamin aman
-                      if (!mounted) return;
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const OnboardingPage(),
-                        ),
+onPressed: () async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Konfirmasi Keluar'),
+      content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+           child: const Text('Batal'),
+             ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF124170),
+                    ),
+                      onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Keluar'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                   if (confirm == true) {
+                    await AuthService.logout();
+                    if (!mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                        MaterialPageRoute(builder: (context) => const OnboardingPage()),
                         (route) => false,
-                      );
+                        );
+                      }
                     },
+
                     icon: const Icon(Icons.logout_rounded, color: primaryColor),
                     label: const Text(
                       'Keluar',
