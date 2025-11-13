@@ -20,7 +20,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   XFile? ktpImage;
   XFile? faceImage;
   final ImagePicker picker = ImagePicker();
-  bool isLoading = false; // ✅ Tambahan: untuk indikator loading
+  bool isLoading = false;
 
   Future<void> _pickKtpImage() async {
     try {
@@ -101,8 +101,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     }
 
     setState(() => isLoading = true);
-
-    // ✅ Simulasi proses verifikasi 2 detik biar lebih smooth
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
@@ -110,8 +108,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verifikasi berhasil!')),
       );
-
-      // ✅ Langsung arahkan ke Seller Dashboard
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -263,10 +259,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                               ),
                               child: ktpImage == null
                                   ? const Center(
-                                      child: Icon(
-                                          Icons.camera_alt_outlined,
-                                          size: 40,
-                                          color: Colors.grey),
+                                      child: Icon(Icons.camera_alt_outlined,
+                                          size: 40, color: Colors.grey),
                                     )
                                   : null,
                             ),
@@ -314,8 +308,15 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                             trailing: ElevatedButton(
                               onPressed: _verifyFace,
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor),
-                              child: const Text('Verifikasi Sekarang'),
+                                backgroundColor: primaryColor,
+                              ),
+                              child: const Text(
+                                'Verifikasi Sekarang',
+                                style: TextStyle(
+                                  color: Colors.white, // ✅ Warna teks dibuat putih
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -360,7 +361,13 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
                                   ),
-                                  child: const Text('Konfirmasi'),
+                                  child: const Text(
+                                    'Konfirmasi',
+                                    style: TextStyle(
+                                      color: Colors.white, // ✅ Warna teks dibuat putih
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -373,8 +380,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
               );
             },
           ),
-
-          // ✅ Loading overlay saat proses verifikasi
           if (isLoading)
             Container(
               color: Colors.black54,

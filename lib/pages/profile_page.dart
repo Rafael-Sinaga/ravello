@@ -191,7 +191,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              // === Kartu Menu ===
+              // === Kartu Menu Akun Saya ===
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -237,6 +237,85 @@ class _ProfilePageState extends State<ProfilePage> {
                       subtitle: 'Tinjau barang favoritmu',
                       onTap: () {
                         Navigator.pushReplacementNamed(context, '/favorite');
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // === Judul Pengaturan (baru) ===
+              const Padding(
+                padding: EdgeInsets.only(left: 4, bottom: 10),
+                child: Text(
+                  'Pengaturan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+
+              // === Kartu Menu Pengaturan ===
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.language,
+                      title: 'Bahasa',
+                      subtitle: 'Pilih bahasa aplikasi',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LanguagePage(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.help_outline,
+                      title: 'FAQ',
+                      subtitle: 'Pertanyaan yang sering diajukan',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FAQPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.headset_mic_outlined,
+                      title: 'Layanan Customer Service',
+                      subtitle: 'Hubungi layanan pelanggan',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CustomerServicePage(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -328,6 +407,144 @@ class _ProfilePageState extends State<ProfilePage> {
         size: 18,
       ),
       onTap: onTap,
+    );
+  }
+}
+
+/// -------------------- HALAMAN PLACEHOLDER --------------------
+/// Halaman ini sederhana; ganti kontennya nanti sesuai requirement backend/UI.
+
+class LanguagePage extends StatelessWidget {
+  const LanguagePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Bahasa'),
+        backgroundColor: Colors.white,
+        foregroundColor: primaryColor,
+        elevation: 1,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Pilih Bahasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
+          Card(
+            child: RadioListTile<String>(
+              value: 'id',
+              groupValue: 'id', // sementara default
+              title: const Text('Bahasa Indonesia'),
+              onChanged: (val) {
+                // implementasi ganti bahasa nanti
+              },
+            ),
+          ),
+          Card(
+            child: RadioListTile<String>(
+              value: 'en',
+              groupValue: 'id',
+              title: const Text('English'),
+              onChanged: (val) {
+                // implementasi ganti bahasa nanti
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FAQPage extends StatelessWidget {
+  const FAQPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('FAQ'),
+        backgroundColor: Colors.white,
+        foregroundColor: primaryColor,
+        elevation: 1,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          Text('Pertanyaan yang sering diajukan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          SizedBox(height: 12),
+          ExpansionTile(
+            title: Text('Bagaimana cara menjadi penjual?'),
+            children: [Padding(padding: EdgeInsets.all(12), child: Text('Isi penjelasan singkat proses pendaftaran...'))],
+          ),
+          ExpansionTile(
+            title: Text('Metode pembayaran apa yang tersedia?'),
+            children: [Padding(padding: EdgeInsets.all(12), child: Text('Contoh: OVO, DANA, COD, dsb.'))],
+          ),
+          ExpansionTile(
+            title: Text('Bagaimana mengajukan keluhan?'),
+            children: [Padding(padding: EdgeInsets.all(12), child: Text('Hubungi customer service lewat menu layanan.'))],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomerServicePage extends StatelessWidget {
+  const CustomerServicePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Layanan Customer Service'),
+        backgroundColor: Colors.white,
+        foregroundColor: primaryColor,
+        elevation: 1,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Hubungi Kami', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.phone_outlined),
+              title: const Text('Telepon'),
+              subtitle: const Text('+62 812-3456-7890'),
+              onTap: () {
+                // panggil telepon jika ingin
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline),
+              title: const Text('Chat (WhatsApp)'),
+              subtitle: const Text('cs@ravello.id'),
+              onTap: () {
+                // buka chat
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.email_outlined),
+              title: const Text('Email'),
+              subtitle: const Text('support@ravello.id'),
+              onTap: () {
+                // buka email client
+              },
+            ),
+            const SizedBox(height: 18),
+            const Text('Jam Operasional', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            const Text('Senin - Jumat: 09:00 - 17:00\nSabtu: 09:00 - 13:00\nMinggu & Hari Libur: Tutup'),
+          ],
+        ),
+      ),
     );
   }
 }
