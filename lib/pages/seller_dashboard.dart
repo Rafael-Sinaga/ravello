@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'profile_page.dart'; // pastikan ini benar sesuai struktur projectmu
 
 class SellerDashboardPage extends StatelessWidget {
   const SellerDashboardPage({super.key});
@@ -14,6 +15,7 @@ class SellerDashboardPage extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
+        automaticallyImplyLeading: false, // 🔥 Hilangkan tombol back
         title: const Text(
           'Profil Penjual',
           style: TextStyle(
@@ -94,6 +96,7 @@ class SellerDashboardPage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 20),
 
             // --- Statistik ---
@@ -111,6 +114,7 @@ class SellerDashboardPage extends StatelessWidget {
                 _buildStatCard(Icons.star_rate, 'Rating', '4.8'),
               ],
             ),
+
             const SizedBox(height: 24),
 
             // --- Aksi Cepat ---
@@ -119,52 +123,61 @@ class SellerDashboardPage extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 12),
+
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 minimumSize: const Size(double.infinity, 52),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              onPressed: () {
-                // Arahkan ke halaman produk
-              },
+              onPressed: () {},
               icon: const Icon(Icons.storefront),
               label: const Text(
                 'Kelola Produk',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
+
             const SizedBox(height: 12),
+
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 minimumSize: const Size(double.infinity, 52),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              onPressed: () {
-                // Arahkan ke halaman transaksi
-              },
+              onPressed: () {},
               icon: const Icon(Icons.receipt_long),
               label: const Text(
                 'Lihat Transaksi',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
+
             const SizedBox(height: 32),
 
-            // --- Keluar ---
+            // 🔥 Keluar sebagai Penjual
             Center(
               child: TextButton(
                 onPressed: () {
-                  // Logout atau kembali ke mode pembeli
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ProfilePage(),
+                    ),
+                    (route) => false,
+                  );
                 },
                 child: const Text(
                   'Keluar sebagai Penjual',
                   style: TextStyle(
                     color: Colors.redAccent,
                     fontWeight: FontWeight.w600,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -175,7 +188,6 @@ class SellerDashboardPage extends StatelessWidget {
     );
   }
 
-  // Widget untuk statistik toko
   Widget _buildStatCard(IconData icon, String title, String value) {
     return Expanded(
       child: Container(

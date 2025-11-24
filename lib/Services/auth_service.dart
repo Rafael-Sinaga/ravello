@@ -31,19 +31,31 @@ class AuthService {
 
         token = data['token'];
 
-        if (data['name'] != null && data['email'] != null) {
-          currentUser = UserModel(
-            id: int.tryParse(data['client_id'].toString()) ?? 0,
-            name: data['name'],
-            email: data['email'],
-          );
-        } else {
-          currentUser = null;
-        }
+        // build user safely (server may return different keys)
+        final id = data['client_id'] ?? data['id'] ?? 0;
+        final name = data['name'] ?? data['user']?['name'] ?? '';
+        final mail = data['email'] ?? data['user']?['email'] ?? '';
 
-        print(
-            'User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
+        currentUser = UserModel(
+          id: int.tryParse(id.toString()) ?? 0,
+          name: name.toString(),
+          email: mail.toString(),
+          isSeller: (data['isSeller'] ?? data['user']?['isSeller'] ?? false) == true,
+        );
+
+        // Load local saved seller flag (device-side persistence) and apply override if present
+        final prefs = await SharedPreferences.getInstance();
+        final localSellerStatus = prefs.getBool('isSeller') ?? currentUser!.isSeller;
+        currentUser!.isSeller = localSellerStatus;
+
+        print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
         print('Token JWT: $token');
+
+        // Optionally save token / user minimal info to SharedPreferences
+        await prefs.setString('auth_token', token ?? '');
+        await prefs.setString('current_user_name', currentUser?.name ?? '');
+        await prefs.setString('current_user_email', currentUser?.email ?? '');
+        await prefs.setInt('current_user_id', currentUser?.id ?? 0);
 
         return {'success': true, 'data': data};
       } else {
@@ -80,13 +92,11 @@ class AuthService {
         if (data['user'] != null) {
           currentUser = UserModel.fromJson(data['user']);
         }
-
         return {'success': true, 'data': data};
       } else {
         return {
           'success': false,
-          'message':
-              'Registrasi gagal (${response.statusCode}): ${response.body}',
+          'message': 'Registrasi gagal (${response.statusCode}): ${response.body}',
         };
       }
     } catch (e) {
@@ -99,11 +109,20 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      if (prefs.containsKey('current_user')) {
-        await prefs.remove('current_user');
+      if (prefs.containsKey('current_user_name')) {
+        await prefs.remove('current_user_name');
+      }
+      if (prefs.containsKey('current_user_email')) {
+        await prefs.remove('current_user_email');
+      }
+      if (prefs.containsKey('current_user_id')) {
+        await prefs.remove('current_user_id');
       }
       if (prefs.containsKey('auth_token')) {
         await prefs.remove('auth_token');
+      }
+      if (prefs.containsKey('isSeller')) {
+        await prefs.remove('isSeller');
       }
 
       currentUser = null;
@@ -114,6 +133,19 @@ class AuthService {
       print('AuthService.logout error: $e');
       currentUser = null;
       token = null;
+    }
+  }
+
+  /// Utility: set seller status in memory + persist
+  static Future<void> setSellerStatus(bool status) async {
+    if (currentUser != null) {
+      currentUser!.isSeller = status;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSeller', status);
+    } else {
+      // still persist for next login
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSeller', status);
     }
   }
 }

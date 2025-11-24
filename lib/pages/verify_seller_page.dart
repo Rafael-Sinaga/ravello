@@ -1,9 +1,11 @@
+import '../services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
-import 'seller_dashboard.dart'; // ✅ Tambahan: import halaman dashboard penjual
+import 'seller_dashboard.dart';
 
 class VerifySellerPage extends StatefulWidget {
   const VerifySellerPage({super.key});
@@ -72,8 +74,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     } catch (e) {
       debugPrint("Error verifying face: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
+        const SnackBar(content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
       );
     }
   }
@@ -108,6 +109,10 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verifikasi berhasil!')),
       );
+
+      // Update status seller di memory + persist
+      await AuthService.setSellerStatus(true);
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -268,8 +273,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                           const SizedBox(height: 8),
                           const Text(
                             'Pastikan seluruh KTP terlihat jelas dan tidak buram.',
-                            style:
-                                TextStyle(color: Colors.grey, fontSize: 12),
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                           const SizedBox(height: 20),
                           ListTile(
@@ -313,7 +317,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                               child: const Text(
                                 'Verifikasi Sekarang',
                                 style: TextStyle(
-                                  color: Colors.white, // ✅ Warna teks dibuat putih
+                                  color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -341,8 +345,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                             '• Informasi yang diberikan benar dan dapat diperbarui.\n'
                             '• Penjual memiliki hak dan kewenangan untuk menjual produk.\n'
                             '• Transaksi dianggap sah sesuai perjanjian yang berlaku.',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           const Spacer(),
                           Row(
@@ -364,7 +367,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                                   child: const Text(
                                     'Konfirmasi',
                                     style: TextStyle(
-                                      color: Colors.white, // ✅ Warna teks dibuat putih
+                                      color: Colors.white,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

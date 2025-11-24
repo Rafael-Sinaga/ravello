@@ -1,10 +1,13 @@
+// lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
 import 'order_page.dart';
 import '../widgets/navbar.dart';
 import 'verify_seller_page.dart';
 import 'onboarding.dart';
 import '../services/auth_service.dart';
+import 'seller_dashboard.dart'; // untuk navigasi langsung ke profil penjual
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,8 +20,26 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Debug: pastikan data user terbaca
+    // Debug
     print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
+    _loadSellerStatus();
+  }
+
+  // Ambil flag isSeller dari SharedPreferences (jika ada) dan apply ke memori
+  Future<void> _loadSellerStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localSeller = prefs.getBool('isSeller');
+    if (localSeller != null) {
+      if (AuthService.currentUser != null) {
+        AuthService.currentUser!.isSeller = localSeller;
+      }
+      if (mounted) setState(() {});
+    }
+  }
+
+  // Refresh manual (dipanggil setelah kembali dari layar verifikasi / dashboard)
+  Future<void> _refreshSellerStatus() async {
+    await _loadSellerStatus();
   }
 
   @override
@@ -122,7 +143,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     InkWell(
-                      onTap: () {},
+                      onTap: () {
+                        // arahkan ke edit profil nanti
+                      },
                       child: Row(
                         children: const [
                           Text(
@@ -144,23 +167,42 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 24),
 
-              // === Tombol Daftar Sebagai Penjual ===
+              // === Tombol Penjual (Dinamis) ===
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 22),
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const VerifySellerPage(),
-                      ),
-                    );
+                    if (AuthService.currentUser?.isSeller == true) {
+                      // Jika sudah menjadi seller → buka halaman toko (langsung ke SellerDashboardPage)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SellerDashboardPage(),
+                        ),
+                      ).then((_) {
+                        // setState setelah kembali untuk memastikan UI ter-refresh
+                        _refreshSellerStatus();
+                      });
+                    } else {
+                      // Jika belum seller → buka halaman verifikasi
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VerifySellerPage(),
+                        ),
+                      ).then((_) {
+                        // refresh UI setelah kembali dari verifikasi
+                        _refreshSellerStatus();
+                      });
+                    }
                   },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
-                  label: const Text(
-                    'Daftar sebagai Penjual',
-                    style: TextStyle(
+                  label: Text(
+                    AuthService.currentUser?.isSeller == true
+                        ? 'Toko Saya'
+                        : 'Daftar sebagai Penjual',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -329,40 +371,42 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: TextButton.icon(
-onPressed: () async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Konfirmasi Keluar'),
-      content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-           child: const Text('Batal'),
-             ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF124170),
-                    ),
-                      onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Keluar'),
-                          ),
-                        ],
-                      ),
-                    );
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Konfirmasi Keluar'),
+                          content: const Text(
+                              'Apakah Anda yakin ingin keluar dari akun ini?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Batal'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Keluar'),
+                            ),
+                          ],
+                        ),
+                      );
 
-                   if (confirm == true) {
-                    await AuthService.logout();
-                    if (!mounted) return;
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                        MaterialPageRoute(builder: (context) => const OnboardingPage()),
-                        (route) => false,
+                      if (confirm == true) {
+                        await AuthService.logout();
+                        if (!mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const OnboardingPage()),
+                          (route) => false,
                         );
                       }
                     },
-
-                    icon: const Icon(Icons.logout_rounded, color: primaryColor),
+                    icon:
+                        const Icon(Icons.logout_rounded, color: primaryColor),
                     label: const Text(
                       'Keluar',
                       style: TextStyle(
@@ -376,7 +420,8 @@ onPressed: () async {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
-                        side: const BorderSide(color: primaryColor, width: 0.5),
+                        side:
+                            const BorderSide(color: primaryColor, width: 0.5),
                       ),
                     ),
                   ),
@@ -434,11 +479,8 @@ onPressed: () async {
 }
 
 /// -------------------- HALAMAN PLACEHOLDER --------------------
-/// Halaman ini sederhana; ganti kontennya nanti sesuai requirement backend/UI.
-
 class LanguagePage extends StatelessWidget {
   const LanguagePage({super.key});
-
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
@@ -452,16 +494,15 @@ class LanguagePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Pilih Bahasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text('Pilih Bahasa',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           Card(
             child: RadioListTile<String>(
               value: 'id',
               groupValue: 'id', // sementara default
               title: const Text('Bahasa Indonesia'),
-              onChanged: (val) {
-                // implementasi ganti bahasa nanti
-              },
+              onChanged: (val) {},
             ),
           ),
           Card(
@@ -469,9 +510,7 @@ class LanguagePage extends StatelessWidget {
               value: 'en',
               groupValue: 'id',
               title: const Text('English'),
-              onChanged: (val) {
-                // implementasi ganti bahasa nanti
-              },
+              onChanged: (val) {},
             ),
           ),
         ],
@@ -482,7 +521,6 @@ class LanguagePage extends StatelessWidget {
 
 class FAQPage extends StatelessWidget {
   const FAQPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
@@ -496,19 +534,32 @@ class FAQPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
-          Text('Pertanyaan yang sering diajukan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('Pertanyaan yang sering diajukan',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           SizedBox(height: 12),
           ExpansionTile(
             title: Text('Bagaimana cara menjadi penjual?'),
-            children: [Padding(padding: EdgeInsets.all(12), child: Text('Isi penjelasan singkat proses pendaftaran...'))],
+            children: [
+              Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Isi penjelasan singkat proses pendaftaran...'))
+            ],
           ),
           ExpansionTile(
             title: Text('Metode pembayaran apa yang tersedia?'),
-            children: [Padding(padding: EdgeInsets.all(12), child: Text('Contoh: OVO, DANA, COD, dsb.'))],
+            children: [
+              Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Contoh: OVO, DANA, COD, dsb.'))
+            ],
           ),
           ExpansionTile(
             title: Text('Bagaimana mengajukan keluhan?'),
-            children: [Padding(padding: EdgeInsets.all(12), child: Text('Hubungi customer service lewat menu layanan.'))],
+            children: [
+              Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Hubungi customer service lewat menu layanan.'))
+            ],
           ),
         ],
       ),
@@ -518,7 +569,6 @@ class FAQPage extends StatelessWidget {
 
 class CustomerServicePage extends StatelessWidget {
   const CustomerServicePage({super.key});
-
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
@@ -534,31 +584,26 @@ class CustomerServicePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hubungi Kami', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('Hubungi Kami',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.phone_outlined),
               title: const Text('Telepon'),
               subtitle: const Text('+62 812-3456-7890'),
-              onTap: () {
-                // panggil telepon jika ingin
-              },
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.chat_bubble_outline),
               title: const Text('Chat (WhatsApp)'),
               subtitle: const Text('cs@ravello.id'),
-              onTap: () {
-                // buka chat
-              },
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.email_outlined),
               title: const Text('Email'),
               subtitle: const Text('support@ravello.id'),
-              onTap: () {
-                // buka email client
-              },
+              onTap: () {},
             ),
             const SizedBox(height: 18),
             const Text('Jam Operasional', style: TextStyle(fontWeight: FontWeight.w600)),
