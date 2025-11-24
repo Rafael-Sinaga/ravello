@@ -1,23 +1,59 @@
-// lib/pages/favorite_page.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/product_model.dart';
 
-class FavoritePage extends StatelessWidget {
+class FavoritePage extends StatefulWidget {
   const FavoritePage({super.key});
 
   @override
+  State<FavoritePage> createState() => _FavoritePageState();
+}
+
+class _FavoritePageState extends State<FavoritePage> {
+  List<String> favoriteKeys = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? <String>[];
+
+    setState(() {
+      favoriteKeys = favs;
+    });
+  }
+
+  Product? _getProductFromKey(String key) {
+    for (var p in products) {
+      final id = '${p.name}_${p.price}_${p.imagePath}';
+      if (id == key) return p;
+    }
+    return null;
+  }
+
+  Future<void> _removeFavorite(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? <String>[];
+
+    favs.remove(key);
+    await prefs.setStringList('favorites', favs);
+
+    setState(() {
+      favoriteKeys = favs;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> favorites = [
-      {
-        'image': 'assets/images/Rolex_KW.png',
-        'title': 'Rolex KW',
-        'price': 175000,
-      },
-      {
-        'image': 'assets/images/Gelang_Rajut.png',
-        'title': 'Gelang Anyaman Rotan',
-        'price': 85000,
-      },
-    ];
+    final favProducts = favoriteKeys
+        .map((k) => _getProductFromKey(k))
+        .where((p) => p != null)
+        .cast<Product>()
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -25,20 +61,17 @@ class FavoritePage extends StatelessWidget {
         elevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, '/home');
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Favorit Saya',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF124170),
-          ),
+          style:
+              TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF124170)),
         ),
       ),
       backgroundColor: const Color(0xFFF8FBFD),
-      body: favorites.isEmpty
+
+      body: favProducts.isEmpty
           ? const Center(
               child: Text(
                 'Belum ada produk favorit',
@@ -47,9 +80,10 @@ class FavoritePage extends StatelessWidget {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: favorites.length,
+              itemCount: favProducts.length,
               itemBuilder: (context, index) {
-                final fav = favorites[index];
+                final p = favProducts[index];
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
@@ -59,34 +93,35 @@ class FavoritePage extends StatelessWidget {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
+                      )
                     ],
                   ),
                   child: ListTile(
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: Image.asset(
-                        fav['image'],
+                        p.imagePath,
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
                       ),
                     ),
                     title: Text(
-                      fav['title'],
+                      p.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF124170),
                       ),
                     ),
                     subtitle: Text(
-                      'Rp${fav['price']}',
+                      'Rp ${p.price.round()}',
                       style: const TextStyle(color: Colors.grey),
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      onPressed: () {},
+                      onPressed: () => _removeFavorite(
+                        '${p.name}_${p.price}_${p.imagePath}',
+                      ),
                     ),
                   ),
                 );

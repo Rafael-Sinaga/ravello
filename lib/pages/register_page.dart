@@ -14,13 +14,15 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController(); // <--- Tambahan
 
   bool isLoading = false;
 
   bool get isFormFilled =>
       nameController.text.trim().isNotEmpty &&
       emailController.text.trim().isNotEmpty &&
-      passwordController.text.trim().isNotEmpty;
+      passwordController.text.trim().isNotEmpty &&
+      phoneController.text.trim().isNotEmpty; // <--- Tambahan
 
   Future<void> handleRegister() async {
     if (!isFormFilled) return;
@@ -30,8 +32,9 @@ class _RegisterPageState extends State<RegisterPage> {
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+    final phone = phoneController.text.trim(); // <--- Tambahan
 
-    final result = await AuthService.register(name, email, password);
+    final result = await AuthService.register(name, email, password); // backend harus disesuaikan jika mau kirim phone
 
     setState(() => isLoading = false);
 
@@ -79,6 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
     nameController.addListener(() => setState(() {}));
     emailController.addListener(() => setState(() {}));
     passwordController.addListener(() => setState(() {}));
+    phoneController.addListener(() => setState(() {})); // <--- Tambahan
   }
 
   @override
@@ -131,6 +135,55 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: emailController,
                   decoration: _inputStyle('contoh@mail.com'),
                   keyboardType: TextInputType.emailAddress),
+              const SizedBox(height: 14),
+
+              // ====== Nomor Telepon ======
+              const Text('Nomor Telepon',
+                  style: TextStyle(
+                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF273E47))),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      border: Border.all(color: const Color(0xFFE6E9EB)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      '+62',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: Color(0xFF273E47)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: phoneController,
+                      decoration: InputDecoration(
+                        hintText: '81234567890',
+                        hintStyle: const TextStyle(fontFamily: 'Poppins', color: Color(0xFF9AA7AB)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE6E9EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE6E9EB)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF124170), width: 2),
+                        ),
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 14),
 
               const Text('Kata Sandi',

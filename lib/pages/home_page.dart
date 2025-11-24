@@ -8,6 +8,7 @@ import '../providers/order_provider.dart';
 import '../widgets/navbar.dart';
 import '../pages/notification_page.dart';
 import '../services/auth_service.dart';
+import '../pages/settings_page.dart'; // ➜ DITAMBAHKAN
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -138,8 +139,19 @@ class _HomePageState extends State<HomePage> {
                           ),
                       ],
                     ),
+
+                    // ======================================
+                    // SETTINGS BUTTON — DITAMBAH NAVIGASI
+                    // ======================================
                     IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsPage(),
+                          ),
+                        );
+                      },
                       icon: const Icon(
                         Icons.settings_outlined,
                         color: Color(0xFF124170),
@@ -219,15 +231,13 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(width: 8),
                         _buildCategoryCircle(Icons.directions_walk, 'Trail'),
                         _buildCategoryCircle(Icons.remove_red_eye, 'Kacamata'),
-                        _buildCategoryCircle(
-                            Icons.shopping_bag_outlined, 'Busana'),
+                        _buildCategoryCircle(Icons.shopping_bag_outlined, 'Busana'),
                         _buildCategoryCircle(Icons.phone_android, 'Elektronik'),
                         _buildCategoryCircle(Icons.home_outlined, 'Dekorasi'),
                         _buildCategoryCircle(Icons.kitchen, 'Perabot'),
                         _buildCategoryCircle(Icons.watch, 'Jam Tangan'),
                         _buildCategoryCircle(Icons.spa, 'Kecantikan'),
-                        _buildCategoryCircle(
-                            Icons.local_florist, 'Tanaman Hias'),
+                        _buildCategoryCircle(Icons.local_florist, 'Tanaman Hias'),
                         const SizedBox(width: 8),
                       ],
                     ),
@@ -323,7 +333,7 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.80, // ✅ lebih proporsional
+                    childAspectRatio: 0.80,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -368,8 +378,7 @@ class _HomePageState extends State<HomePage> {
                                     top: Radius.circular(12)),
                                 child: Image.asset(
                                   product.imagePath,
-                                  height:
-                                      90, // ✅ ukuran dikembalikan seperti semula
+                                  height: 90,
                                   width: double.infinity,
                                   fit: BoxFit.contain,
                                   filterQuality: FilterQuality.medium,
@@ -408,8 +417,8 @@ class _HomePageState extends State<HomePage> {
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey,
-                                                  decoration: TextDecoration
-                                                      .lineThrough,
+                                                  decoration:
+                                                      TextDecoration.lineThrough,
                                                   fontFamily: 'Poppins',
                                                 ),
                                               ),
@@ -554,8 +563,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.black87,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontFamily: 'Poppins',
               ),
             ),

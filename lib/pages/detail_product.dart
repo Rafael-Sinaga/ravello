@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DetailProduct extends StatefulWidget {
   final Product product;
@@ -13,8 +14,55 @@ class DetailProduct extends StatefulWidget {
 }
 
 class _DetailProductState extends State<DetailProduct> {
-  String? selectedSize; // ✅ untuk menyimpan ukuran yang dipilih
+  String? selectedSize;
   int currentImageIndex = 0;
+
+  bool _isFavorited = false;
+  late String _favKey;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // identifier unik
+    _favKey =
+        '${widget.product.name}_${widget.product.price}_${widget.product.imagePath}';
+
+    _loadFavorite();
+  }
+
+  Future<void> _loadFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? <String>[];
+
+    setState(() {
+      _isFavorited = favs.contains(_favKey);
+    });
+  }
+
+  Future<void> _toggleFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favs = prefs.getStringList('favorites') ?? <String>[];
+
+    setState(() {
+      if (_isFavorited) {
+        favs.remove(_favKey);
+        _isFavorited = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${widget.product.name} dihapus dari favorit')),
+        );
+      } else {
+        favs.add(_favKey);
+        _isFavorited = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('${widget.product.name} ditambahkan ke favorit')),
+        );
+      }
+    });
+
+    await prefs.setStringList('favorites', favs);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +70,7 @@ class _DetailProductState extends State<DetailProduct> {
 
     final hasDiscount =
         widget.product.discount != null && widget.product.discount! > 0;
+
     final discountedPrice = hasDiscount
         ? widget.product.price -
             (widget.product.price * (widget.product.discount! / 100))
@@ -45,13 +94,11 @@ class _DetailProductState extends State<DetailProduct> {
             fontFamily: 'Poppins',
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Color(0xFF124170)),
-            onPressed: () {},
-          ),
-        ],
       ),
+
+      // ===================
+      // BODY
+      // ===================
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
@@ -59,7 +106,6 @@ class _DetailProductState extends State<DetailProduct> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ GAMBAR PRODUK
               Center(
                 child: Hero(
                   tag: widget.product.imagePath,
@@ -73,30 +119,12 @@ class _DetailProductState extends State<DetailProduct> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
 
-              // DOTS indikator (jika kamu ingin multi-gambar di masa depan)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  3,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    height: 6,
-                    width: currentImageIndex == index ? 16 : 6,
-                    decoration: BoxDecoration(
-                      color: currentImageIndex == index
-                          ? const Color(0xFF124170)
-                          : Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              ),
               const SizedBox(height: 20),
 
-              // ✅ NAMA & HARGA
+              // ===================
+              // NAMA & HARGA
+              // ===================
               Text(
                 widget.product.name,
                 style: const TextStyle(
@@ -106,7 +134,9 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
+
               const SizedBox(height: 4),
+
               if (hasDiscount)
                 Row(
                   children: [
@@ -122,9 +152,7 @@ class _DetailProductState extends State<DetailProduct> {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 2,
-                        horizontal: 6,
-                      ),
+                          vertical: 2, horizontal: 6),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(4),
@@ -141,7 +169,9 @@ class _DetailProductState extends State<DetailProduct> {
                     ),
                   ],
                 ),
+
               const SizedBox(height: 4),
+
               Text(
                 'Rp ${_formatPrice(discountedPrice)}',
                 style: const TextStyle(
@@ -151,68 +181,75 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // ✅ PILIH UKURAN (INTERAKTIF)
-              const Text(
-                'Pilih Ukuran',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Colors.black87,
-                  fontFamily: 'Poppins',
-                ),
+              const SizedBox(height: 25),
+
+              // ===================
+              // UKURAN + FAVORITE BUTTON
+              // ===================
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Pilih Ukuran',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isFavorited
+                          ? Icons.favorite
+                          : Icons.favorite_border_outlined,
+                      color: _isFavorited ? Colors.red : Color(0xFF124170),
+                      size: 28,
+                    ),
+                    onPressed: _toggleFavorite,
+                  )
+                ],
               ),
+
               const SizedBox(height: 10),
+
               Wrap(
                 spacing: 10,
                 children: ['S', 'M', 'L', 'XL'].map((size) {
                   final isSelected = selectedSize == size;
+
                   return GestureDetector(
-                    onTap: () {
-                      setState(() => selectedSize = size);
-                    },
+                    onTap: () => setState(() => selectedSize = size),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF124170)
-                            : Colors.white,
+                        color:
+                            isSelected ? const Color(0xFF124170) : Colors.white,
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF124170)
                               : Colors.grey.shade300,
                         ),
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.blue.shade100,
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                )
-                              ]
-                            : [],
                       ),
                       child: Text(
                         size,
                         style: TextStyle(
-                          fontSize: 14,
-                          fontFamily: 'Poppins',
-                          color:
-                              isSelected ? Colors.white : Colors.black87,
+                          color: isSelected ? Colors.white : Colors.black87,
                           fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins',
                         ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
+
               const SizedBox(height: 20),
 
-              // ✅ DESKRIPSI
               const Text(
                 'Deskripsi',
                 style: TextStyle(
@@ -222,7 +259,9 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
+
               const SizedBox(height: 6),
+
               Text(
                 widget.product.description,
                 style: const TextStyle(
@@ -232,13 +271,16 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
-              const SizedBox(height: 90), // jarak agar tombol tidak ketutup
+
+              const SizedBox(height: 100),
             ],
           ),
         ),
       ),
 
-      // ✅ TOMBOL AKSI BAWAH
+      // ===================
+      // BOTTOM BUTTONS
+      // ===================
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -250,23 +292,17 @@ class _DetailProductState extends State<DetailProduct> {
                   if (selectedSize == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Pilih ukuran terlebih dahulu!',
-                          style: TextStyle(fontFamily: 'Poppins'),
-                        ),
-                        backgroundColor: Colors.redAccent,
-                      ),
+                          content: Text('Pilih ukuran terlebih dahulu!')),
                     );
                     return;
                   }
 
                   cartProvider.addToCart(widget.product);
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        '${widget.product.name} (${selectedSize!}) ditambahkan ke keranjang',
-                        style: const TextStyle(fontFamily: 'Poppins'),
-                      ),
+                          '${widget.product.name} (${selectedSize!}) ditambahkan ke keranjang'),
                       backgroundColor: const Color(0xFF124170),
                     ),
                   );
@@ -274,29 +310,28 @@ class _DetailProductState extends State<DetailProduct> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF124170),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                      borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: const Text(
                   'Tambah ke Keranjang',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
+
             const SizedBox(width: 12),
+
             Expanded(
               child: OutlinedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.pushNamed(context, '/checkout'),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF124170)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                      borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: const Text(
@@ -316,10 +351,11 @@ class _DetailProductState extends State<DetailProduct> {
   }
 
   String _formatPrice(num price) {
-    final int value = price.round();
-    final s = value.toString();
+    final val = price.round();
+    final s = val.toString();
     final buffer = StringBuffer();
     int count = 0;
+
     for (int i = s.length - 1; i >= 0; i--) {
       buffer.write(s[i]);
       count++;
@@ -328,6 +364,7 @@ class _DetailProductState extends State<DetailProduct> {
         count = 0;
       }
     }
+
     return buffer.toString().split('').reversed.join('');
   }
 }

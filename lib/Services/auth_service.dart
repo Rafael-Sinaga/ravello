@@ -36,7 +36,6 @@ class AuthService {
         final name = data['name'] ?? data['user']?['name'] ?? '';
         final mail = data['email'] ?? data['user']?['email'] ?? '';
 
-<<<<<<< HEAD
         currentUser = UserModel(
           id: int.tryParse(id.toString()) ?? 0,
           name: name.toString(),
@@ -58,8 +57,6 @@ class AuthService {
         await prefs.setString('current_user_email', currentUser?.email ?? '');
         await prefs.setInt('current_user_id', currentUser?.id ?? 0);
 
-=======
->>>>>>> c88b258086b5aa0d077ae648ab9b8f1529c777c6
         return {'success': true, 'data': data};
       } else {
         return {

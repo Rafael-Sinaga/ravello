@@ -1,4 +1,6 @@
 // lib/pages/profile_page.dart
+// === PROFILE PAGE FINAL ===
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
@@ -8,6 +10,157 @@ import 'verify_seller_page.dart';
 import 'onboarding.dart';
 import '../services/auth_service.dart';
 import 'seller_dashboard.dart'; // untuk navigasi langsung ke profil penjual
+import 'edit_profile_page.dart'; // <-- Tambahan import
+
+// ======================================================
+// ========== CUSTOMER SERVICE PAGE (NO LAUNCHER) ========
+// ======================================================
+
+class CustomerServicePage extends StatelessWidget {
+  const CustomerServicePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Layanan Customer Service',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: primaryColor),
+        elevation: 0,
+      ),
+      backgroundColor: const Color(0xFFF8FBFD),
+
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Hubungi Customer Service',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 12),
+
+              Text(
+                'Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi layanan pelanggan melalui detail berikut:',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              Text(
+                'Email:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              Text('support@tokoapp.com'),
+
+              SizedBox(height: 16),
+
+              Text(
+                'Jam Operasional:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              Text('Senin - Jumat, 08.00 - 17.00 WIB'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ======================================================
+// ======================= FAQ PAGE =====================
+// ======================================================
+
+class FAQPage extends StatelessWidget {
+  const FAQPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'FAQ',
+          style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
+        ),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: primaryColor),
+        elevation: 0,
+      ),
+      backgroundColor: const Color(0xFFF8FBFD),
+
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          ExpansionTile(
+            title: Text('Bagaimana cara melakukan pemesanan?'),
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                    'Anda dapat melakukan pemesanan melalui halaman produk dan memilih tombol "Tambah ke Keranjang".'),
+              )
+            ],
+          ),
+          ExpansionTile(
+            title: Text('Bagaimana cara menghubungi penjual?'),
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                    'Anda dapat menghubungi penjual melalui halaman produk yang menyediakan fitur kontak.'),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ======================================================
+// ===================== PROFILE PAGE ====================
+// ======================================================
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,15 +170,18 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  String? _overrideName;
+  String? _overrideDescription;
+
   @override
   void initState() {
     super.initState();
     // Debug
     print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
     _loadSellerStatus();
+    _loadLocalDescription();
   }
 
-  // Ambil flag isSeller dari SharedPreferences (jika ada) dan apply ke memori
   Future<void> _loadSellerStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final localSeller = prefs.getBool('isSeller');
@@ -37,9 +193,17 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Refresh manual (dipanggil setelah kembali dari layar verifikasi / dashboard)
   Future<void> _refreshSellerStatus() async {
     await _loadSellerStatus();
+    _loadLocalDescription();
+  }
+
+  Future<void> _loadLocalDescription() async {
+    final prefs = await SharedPreferences.getInstance();
+    final desc = prefs.getString('user_description');
+    if (desc != null && desc.isNotEmpty) {
+      setState(() => _overrideDescription = desc);
+    }
   }
 
   @override
@@ -47,19 +211,19 @@ class _ProfilePageState extends State<ProfilePage> {
     const Color primaryColor = Color(0xFF124170);
     const Color lightBackground = Color(0xFFF8FBFD);
 
-    final user = AuthService.currentUser;
+    final nameToShow = _overrideName ?? AuthService.currentUser?.name ?? 'Pengguna';
+    final emailToShow = AuthService.currentUser?.email ?? 'Email tidak tersedia';
+    final descToShow = _overrideDescription;
 
     return WillPopScope(
       onWillPop: () async {
-        Navigator.of(context).pushReplacement(
+        Navigator.pushReplacement(
+          context,
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 350),
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomePage(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+            pageBuilder: (_, __, ___) => const HomePage(),
+            transitionsBuilder: (_, animation, __, child) =>
+                FadeTransition(opacity: animation, child: child),
           ),
         );
         return false;
@@ -84,16 +248,14 @@ class _ProfilePageState extends State<ProfilePage> {
           centerTitle: true,
         ),
         body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // === Kartu Profil ===
+              // ================= KARTU PROFIL ===================
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -114,51 +276,57 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(width: 14),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Halo,',
-                            style: TextStyle(
-                              color: Color(0xFF6F7A74),
-                              fontSize: 13,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                          );
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Halo,',
+                              style: TextStyle(color: Color(0xFF6F7A74), fontSize: 13),
                             ),
-                          ),
-                          Text(
-                            user?.name ?? 'Pengguna',
-                            style: const TextStyle(
-                              color: primaryColor,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  nameToShow,
+                                  style: const TextStyle(
+                                    color: primaryColor,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.edit,
+                                  size: 18,
+                                  color: primaryColor,
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            user?.email ?? 'Email tidak tersedia',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
+                            Text(
+                              emailToShow,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () {
-                        // arahkan ke edit profil nanti
-                      },
-                      child: Row(
-                        children: const [
-                          Text(
-                            'Edit',
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(Icons.edit, size: 16, color: primaryColor),
-                        ],
+                            if (descToShow != null && descToShow.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  descToShow,
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -174,25 +342,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     if (AuthService.currentUser?.isSeller == true) {
-                      // Jika sudah menjadi seller → buka halaman toko (langsung ke SellerDashboardPage)
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const SellerDashboardPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const SellerDashboardPage()),
                       ).then((_) {
-                        // setState setelah kembali untuk memastikan UI ter-refresh
                         _refreshSellerStatus();
                       });
                     } else {
-                      // Jika belum seller → buka halaman verifikasi
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const VerifySellerPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const VerifySellerPage()),
                       ).then((_) {
-                        // refresh UI setelah kembali dari verifikasi
                         _refreshSellerStatus();
                       });
                     }
@@ -214,13 +374,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 3,
-                    shadowColor: primaryColor.withOpacity(0.25),
                   ),
                 ),
               ),
 
-              // === Judul Akun Saya ===
+              // ================== AKUN SAYA ===================
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
@@ -233,20 +391,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              // === Kartu Menu Akun Saya ===
               Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
+                decoration: _box(),
                 child: Column(
                   children: [
                     _buildMenuItem(
@@ -257,9 +403,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const OrderPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const OrderPage()),
                         );
                       },
                     ),
@@ -277,9 +421,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: Icons.favorite_border_rounded,
                       title: 'Favorit Saya',
                       subtitle: 'Tinjau barang favoritmu',
-                      onTap: () {
-                        Navigator.pushReplacementNamed(context, '/favorite');
-                      },
+                      onTap: () => Navigator.pushReplacementNamed(context, '/favorite'),
                     ),
                   ],
                 ),
@@ -287,11 +429,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 20),
 
-              // === Judul Pengaturan (baru) ===
+              // =============== LAINNYA (FAQ + CUSTOMER SERVICE) ===============
               const Padding(
                 padding: EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
-                  'Pengaturan',
+                  'Lainnya',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -300,37 +442,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              // === Kartu Menu Pengaturan ===
               Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
+                decoration: _box(),
                 child: Column(
                   children: [
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.language,
-                      title: 'Bahasa',
-                      subtitle: 'Pilih bahasa aplikasi',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LanguagePage(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1),
                     _buildMenuItem(
                       context,
                       icon: Icons.help_outline,
@@ -339,9 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const FAQPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const FAQPage()),
                         );
                       },
                     ),
@@ -354,9 +467,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const CustomerServicePage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const CustomerServicePage()),
                         );
                       },
                     ),
@@ -366,7 +477,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 28),
 
-              // === Tombol Keluar ===
+              // ==================== LOGOUT ======================
               Center(
                 child: SizedBox(
                   width: double.infinity,
@@ -376,17 +487,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Konfirmasi Keluar'),
-                          content: const Text(
-                              'Apakah Anda yakin ingin keluar dari akun ini?'),
+                          content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
                               child: const Text('Batal'),
                             ),
                             ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                              ),
+                              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
                               onPressed: () => Navigator.pop(context, true),
                               child: const Text('Keluar'),
                             ),
@@ -399,14 +507,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         if (!mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => const OnboardingPage()),
+                          MaterialPageRoute(builder: (context) => const OnboardingPage()),
                           (route) => false,
                         );
                       }
                     },
-                    icon:
-                        const Icon(Icons.logout_rounded, color: primaryColor),
+                    icon: const Icon(Icons.logout_rounded, color: primaryColor),
                     label: const Text(
                       'Keluar',
                       style: TextStyle(
@@ -420,8 +526,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
-                        side:
-                            const BorderSide(color: primaryColor, width: 0.5),
+                        side: const BorderSide(color: primaryColor, width: 0.5),
                       ),
                     ),
                   ),
@@ -432,6 +537,23 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         bottomNavigationBar: const Navbar(currentIndex: 2),
       ),
+    );
+  }
+
+  // ======== UI UTILITIES ========
+
+  BoxDecoration _box() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 5,
+          offset: const Offset(0, 3),
+        )
+      ],
     );
   }
 
@@ -474,144 +596,6 @@ class _ProfilePageState extends State<ProfilePage> {
         size: 18,
       ),
       onTap: onTap,
-    );
-  }
-}
-
-/// -------------------- HALAMAN PLACEHOLDER --------------------
-class LanguagePage extends StatelessWidget {
-  const LanguagePage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF124170);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bahasa'),
-        backgroundColor: Colors.white,
-        foregroundColor: primaryColor,
-        elevation: 1,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text('Pilih Bahasa',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Card(
-            child: RadioListTile<String>(
-              value: 'id',
-              groupValue: 'id', // sementara default
-              title: const Text('Bahasa Indonesia'),
-              onChanged: (val) {},
-            ),
-          ),
-          Card(
-            child: RadioListTile<String>(
-              value: 'en',
-              groupValue: 'id',
-              title: const Text('English'),
-              onChanged: (val) {},
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class FAQPage extends StatelessWidget {
-  const FAQPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF124170);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('FAQ'),
-        backgroundColor: Colors.white,
-        foregroundColor: primaryColor,
-        elevation: 1,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          Text('Pertanyaan yang sering diajukan',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(height: 12),
-          ExpansionTile(
-            title: Text('Bagaimana cara menjadi penjual?'),
-            children: [
-              Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('Isi penjelasan singkat proses pendaftaran...'))
-            ],
-          ),
-          ExpansionTile(
-            title: Text('Metode pembayaran apa yang tersedia?'),
-            children: [
-              Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('Contoh: OVO, DANA, COD, dsb.'))
-            ],
-          ),
-          ExpansionTile(
-            title: Text('Bagaimana mengajukan keluhan?'),
-            children: [
-              Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('Hubungi customer service lewat menu layanan.'))
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CustomerServicePage extends StatelessWidget {
-  const CustomerServicePage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF124170);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Layanan Customer Service'),
-        backgroundColor: Colors.white,
-        foregroundColor: primaryColor,
-        elevation: 1,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Hubungi Kami',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.phone_outlined),
-              title: const Text('Telepon'),
-              subtitle: const Text('+62 812-3456-7890'),
-              onTap: () {},
-            ),
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_outline),
-              title: const Text('Chat (WhatsApp)'),
-              subtitle: const Text('cs@ravello.id'),
-              onTap: () {},
-            ),
-            ListTile(
-              leading: const Icon(Icons.email_outlined),
-              title: const Text('Email'),
-              subtitle: const Text('support@ravello.id'),
-              onTap: () {},
-            ),
-            const SizedBox(height: 18),
-            const Text('Jam Operasional', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            const Text('Senin - Jumat: 09:00 - 17:00\nSabtu: 09:00 - 13:00\nMinggu & Hari Libur: Tutup'),
-          ],
-        ),
-      ),
     );
   }
 }
