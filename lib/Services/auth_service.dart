@@ -36,6 +36,7 @@ class AuthService {
         final name = data['name'] ?? data['user']?['name'] ?? '';
         final mail = data['email'] ?? data['user']?['email'] ?? '';
 
+<<<<<<< HEAD
         currentUser = UserModel(
           id: int.tryParse(id.toString()) ?? 0,
           name: name.toString(),
@@ -57,6 +58,8 @@ class AuthService {
         await prefs.setString('current_user_email', currentUser?.email ?? '');
         await prefs.setInt('current_user_id', currentUser?.id ?? 0);
 
+=======
+>>>>>>> c88b258086b5aa0d077ae648ab9b8f1529c777c6
         return {'success': true, 'data': data};
       } else {
         return {
@@ -101,6 +104,62 @@ class AuthService {
       }
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan koneksi: $e'};
+    }
+  }
+
+  /// 📩 KIRIM OTP (target = phone string)
+  static Future<Map<String, dynamic>> sendOtp(String phone) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/send-otp');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': phone}),
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengirim OTP'
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+    }
+  }
+
+  /// ✅ VERIFIKASI OTP (target = phone string)
+  static Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': phone, 'otp': otp}),
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'OTP salah atau kadaluarsa'
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
     }
   }
 
