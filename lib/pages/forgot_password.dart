@@ -1,264 +1,294 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:ravello/pages/otp_page.dart';
+import 'login_page.dart';
+import '../services/auth_service.dart';
 
-class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
+class OTPVerificationPage extends StatefulWidget {
+  final String phoneNumber;
+
+  /// Tambahan parameter (opsional)
+  final VoidCallback? onVerificationSuccess;
+
+  const OTPVerificationPage({
+    super.key,
+    required this.phoneNumber,
+    this.onVerificationSuccess,   // <-- Tambahan
+  });
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  State<OTPVerificationPage> createState() => _OTPVerificationPageState();
 }
 
-class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+class _OTPVerificationPageState extends State<OTPVerificationPage> {
+  final List<TextEditingController> _otpControllers =
+      List.generate(6, (index) => TextEditingController());
+  final List<FocusNode> _otpFocusNodes =
+      List.generate(6, (index) => FocusNode());
 
-  InputDecoration _buildInputDecoration({
-    required String label,
-    String? hint,
-    Widget? prefix,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      prefixIcon: prefix,
-      labelStyle: const TextStyle(
-        fontFamily: 'Poppins',
-        fontSize: 14,
-        color: Color(0xFF6F7A74),
-      ),
-      floatingLabelBehavior: FloatingLabelBehavior.auto,
-      filled: true,
-      fillColor: const Color(0xFFF2F4F4),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFFBDBDBD), width: 1),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFFBDBDBD), width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFF273E47), width: 2),
-      ),
-    );
+  int _remainingSeconds = 60;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupOTPListeners();
+    _startTimer();
+    _sendOTP();
   }
 
-  void _sendResetCode() {
-    if (_emailController.text.isEmpty && _phoneController.text.isEmpty) {
-      _showSnackBar('Harap masukkan email atau nomor telepon');
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() => _remainingSeconds--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _sendOTP() async {
+    final res = await AuthService.sendOtp(widget.phoneNumber);
+    if (res['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['message'] ?? 'Gagal mengirim OTP')),
+      );
+    }
+  }
+
+  void _resendOTP() {
+    if (_remainingSeconds == 0) {
+      setState(() => _remainingSeconds = 60);
+      _startTimer();
+      _sendOTP();
+    }
+  }
+
+  void _setupOTPListeners() {
+    for (int i = 0; i < _otpControllers.length; i++) {
+      _otpControllers[i].addListener(() {
+        if (_otpControllers[i].text.length == 1 && i < 5) {
+          _otpFocusNodes[i + 1].requestFocus();
+        }
+        if (_otpControllers[i].text.isEmpty && i > 0) {
+          _otpFocusNodes[i - 1].requestFocus();
+        }
+      });
+    }
+  }
+
+  Future<void> _verifyOTP() async {
+    String otp = _otpControllers.map((c) => c.text).join();
+
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap masukkan kode OTP lengkap'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-    // Determine which method to use (email or phone)
-    String contactInfo = '';
-    if (_emailController.text.isNotEmpty) {
-      contactInfo = _emailController.text;
-    } else {
-      contactInfo = _phoneController.text;
-    }
-
-    // Navigate to OTP page for password reset
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OTPVerificationPage(
-          phoneNumber: contactInfo,
-          onVerificationSuccess: () {
-            // Callback ketika OTP berhasil diverifikasi
-            // Bisa navigasi ke reset password page atau langsung login
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Kode verifikasi berhasil! Silakan buat kata sandi baru.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            // Navigator.push(...) untuk ke halaman reset password
-          },
-        ),
-      ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    final result = await AuthService.verifyOtp(widget.phoneNumber, otp);
+
+    Navigator.of(context).pop();
+
+    if (result['success']) {
+      
+      /// 🔥 Jika forgot password page kirim callback → jalankan callback
+      if (widget.onVerificationSuccess != null) {
+        widget.onVerificationSuccess!();
+        return; // kembali agar tidak lanjut ke loginPage()
+      }
+
+      /// 🔥 Alur normal (login/register) tetap seperti sebelumnya
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Verifikasi gagal'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  String _formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _phoneController.dispose();
+    _timer.cancel();
+    for (var c in _otpControllers) {
+      c.dispose();
+    }
+    for (var n in _otpFocusNodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FDFA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.of(context).pop()),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: screenHeight * 0.05),
-            
-            // Title
-            const Text(
-              'Lupa Kata Sandi?',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF273E47),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
+              const Text(
+                'Masukkan Kode OTP',
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700),
               ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Description text
-            const Text(
-              'Harap masukan nomor telepon / email yang sudah pernah di daftarkan.',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                color: Colors.grey,
-                height: 1.4,
+              const SizedBox(height: 10),
+              Text(
+                'Kami telah mengirimkan kode OTP ke ${widget.phoneNumber}. Silakan masukkan kode yang diterima.',
+                style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    color: Color(0xFF8EA0A7),
+                    height: 1.4),
               ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Email Input
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: _buildInputDecoration(
-                label: 'Email',
-                hint: 'Masukkan alamat email anda',
-                prefix: const Icon(
-                  Icons.email_outlined,
-                  color: Color(0xFF6F7A74),
-                  size: 20,
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Separator "atau"
-            Row(
-              children: [
-                Expanded(
-                  child: Divider(
-                    color: Colors.grey[400],
-                    thickness: 1,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    'atau',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+              const SizedBox(height: 24),
+
+              Center(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(6, (index) {
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 6)
+                            ],
+                            border:
+                                Border.all(color: const Color(0xFFE6E9EB)),
+                          ),
+                          child: TextField(
+                            controller: _otpControllers[index],
+                            focusNode: _otpFocusNodes[index],
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            maxLength: 1,
+                            style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700),
+                            decoration: const InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero),
+                            onChanged: (v) {
+                              if (v.length == 1 && index < 5) {
+                                _otpFocusNodes[index + 1].requestFocus();
+                              }
+                            },
+                          ),
+                        );
+                      }),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Divider(
-                    color: Colors.grey[400],
-                    thickness: 1,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Phone Input
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: _buildInputDecoration(
-                label: 'Nomor Telepon',
-                hint: 'Masukkan nomor telepon anda',
-                prefix: const Icon(
-                  Icons.phone_outlined,
-                  color: Color(0xFF6F7A74),
-                  size: 20,
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Send Reset Code Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _sendResetCode,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6180A0),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 2,
-                ),
-                child: const Text(
-                  'Kirim Kode Reset',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.timer_outlined,
+                            size: 16, color: Color(0xFF7D98A6)),
+                        const SizedBox(width: 8),
+                        Text(_formatTime(_remainingSeconds),
+                            style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF273E47))),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: _remainingSeconds == 0 ? _resendOTP : null,
+                          child: Text(
+                            'Kirim ulang',
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: _remainingSeconds == 0
+                                    ? const Color(0xFF124170)
+                                    : Colors.grey[400],
+                                fontWeight: _remainingSeconds == 0
+                                    ? FontWeight.w600
+                                    : FontWeight.normal),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _verifyOTP,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6180A0),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Verifikasi Kode OTP',
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Back to Login
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  'Kembali ke Masuk',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6180A0),
+
+              const Spacer(),
+              Center(
+                child: TextButton(
+                  onPressed: _remainingSeconds == 0 ? _resendOTP : null,
+                  child: Text(
+                    'Kirim ulang kode OTP',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: _remainingSeconds == 0
+                            ? const Color(0xFF124170)
+                            : Colors.grey[400]),
                   ),
                 ),
               ),
-            ),
-            
-            SizedBox(height: screenHeight * 0.05),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

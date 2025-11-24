@@ -41,10 +41,6 @@ class AuthService {
           currentUser = null;
         }
 
-        print(
-            'User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
-        print('Token JWT: $token');
-
         return {'success': true, 'data': data};
       } else {
         return {
@@ -91,6 +87,62 @@ class AuthService {
       }
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan koneksi: $e'};
+    }
+  }
+
+  /// 📩 KIRIM OTP (target = phone string)
+  static Future<Map<String, dynamic>> sendOtp(String phone) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/send-otp');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': phone}),
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengirim OTP'
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+    }
+  }
+
+  /// ✅ VERIFIKASI OTP (target = phone string)
+  static Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': phone, 'otp': otp}),
+          )
+          .timeout(_timeoutDuration);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'OTP salah atau kadaluarsa'
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
     }
   }
 
