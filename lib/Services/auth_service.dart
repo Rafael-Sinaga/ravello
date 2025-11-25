@@ -31,7 +31,6 @@ class AuthService {
 
         token = data['token'];
 
-        // build user safely (server may return different keys)
         final id = data['client_id'] ?? data['id'] ?? 0;
         final name = data['name'] ?? data['user']?['name'] ?? '';
         final mail = data['email'] ?? data['user']?['email'] ?? '';
@@ -43,7 +42,6 @@ class AuthService {
           isSeller: (data['isSeller'] ?? data['user']?['isSeller'] ?? false) == true,
         );
 
-        // Load local saved seller flag (device-side persistence) and apply override if present
         final prefs = await SharedPreferences.getInstance();
         final localSellerStatus = prefs.getBool('isSeller') ?? currentUser!.isSeller;
         currentUser!.isSeller = localSellerStatus;
@@ -51,7 +49,6 @@ class AuthService {
         print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
         print('Token JWT: $token');
 
-        // Optionally save token / user minimal info to SharedPreferences
         await prefs.setString('auth_token', token ?? '');
         await prefs.setString('current_user_name', currentUser?.name ?? '');
         await prefs.setString('current_user_email', currentUser?.email ?? '');
@@ -104,16 +101,16 @@ class AuthService {
     }
   }
 
-  /// 📩 KIRIM OTP (target = phone string)
-  static Future<Map<String, dynamic>> sendOtp(String phone) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/auth/send-otp');
+  /// 📩 KIRIM OTP (berdasarkan email)
+  static Future<Map<String, dynamic>> sendOtp(String email) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/send-otp');
 
     try {
       final response = await http
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'phone': phone}),
+            body: jsonEncode({'email': email}),
           )
           .timeout(_timeoutDuration);
 
@@ -132,16 +129,19 @@ class AuthService {
     }
   }
 
-  /// ✅ VERIFIKASI OTP (target = phone string)
-  static Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp');
+  /// ✅ VERIFIKASI OTP (email + kode OTP)
+  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/postClient/verify-otp');
 
     try {
       final response = await http
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'phone': phone, 'otp': otp}),
+            body: jsonEncode({
+              'email': email,
+              'otp': otp,
+            }),
           )
           .timeout(_timeoutDuration);
 
@@ -199,7 +199,6 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isSeller', status);
     } else {
-      // still persist for next login
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isSeller', status);
     }
