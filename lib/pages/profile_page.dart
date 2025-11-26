@@ -410,14 +410,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     const Divider(height: 1),
                     _buildMenuItem(
                       context,
-                      icon: Icons.notifications_none_rounded,
-                      title: 'Notifikasi',
-                      subtitle: 'Tinjau semua notifikasimu',
-                      onTap: () {},
-                    ),
-                    const Divider(height: 1),
-                    _buildMenuItem(
-                      context,
                       icon: Icons.favorite_border_rounded,
                       title: 'Favorit Saya',
                       subtitle: 'Tinjau barang favoritmu',
