@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_page.dart'; // pastikan ini benar sesuai struktur projectmu
-import 'manage_products_page.dart'; // ⬅️ IMPORT BARU
+import 'manage_products_page.dart'; // ⬅️ IMPORT
 
-class SellerDashboardPage extends StatelessWidget {
+class SellerDashboardPage extends StatefulWidget {
   const SellerDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF124170);
-    const Color backgroundColor = Color(0xFFF8FBFD);
+  State<SellerDashboardPage> createState() => _SellerDashboardPageState();
+}
 
+class _SellerDashboardPageState extends State<SellerDashboardPage> {
+  static const Color primaryColor = Color(0xFF124170);
+  static const Color backgroundColor = Color(0xFFF8FBFD);
+
+  String storeName = 'Nama Toko';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoreName();
+  }
+
+  Future<void> _loadStoreName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      storeName = prefs.getString('storeName') ?? 'Nama Toko';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Data dummy untuk grafik penjualan (misal 7 hari terakhir)
     final List<double> salesData = [12, 8, 14, 10, 18, 9, 15];
     final List<String> dayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
@@ -76,17 +97,17 @@ class SellerDashboardPage extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          'Toko SereNatura',
-                          style: TextStyle(
+                          storeName,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: primaryColor,
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Row(
+                        const SizedBox(height: 4),
+                        const Row(
                           children: [
                             Icon(Icons.verified, color: Colors.green, size: 18),
                             SizedBox(width: 4),
@@ -146,6 +167,56 @@ class SellerDashboardPage extends StatelessWidget {
               child: SalesLineChart(
                 data: salesData,
                 labels: dayLabels,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ===================== MENU IKON (PRODUK / KEUANGAN / PUSAT BANTUAN) =====================
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _buildDashboardIconItem(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Produk',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManageProductsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDashboardIconItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Keuangan',
+                    onTap: () {
+                      // TODO: tambahkan halaman keuangan jika sudah ada
+                    },
+                  ),
+                  _buildDashboardIconItem(
+                    icon: Icons.help_outline,
+                    title: 'Pusat Bantuan',
+                    onTap: () {
+                      // TODO: sambungkan ke pusat bantuan / FAQ jika sudah ada
+                    },
+                  ),
+                ],
               ),
             ),
 
@@ -318,14 +389,12 @@ class SellerDashboardPage extends StatelessWidget {
     required String title,
     required String value,
   }) {
-    const Color primaryColor = Color(0xFF124170);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: const TextStyle(
+        const Text(
+          '3', // value dummy tetap, kalau mau dinamis nanti bisa diganti
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
             color: primaryColor,
@@ -362,7 +431,7 @@ class SellerDashboardPage extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: const Color(0xFF124170), size: 28),
+            Icon(icon, color: primaryColor, size: 28),
             const SizedBox(height: 8),
             Text(
               value,
@@ -377,6 +446,43 @@ class SellerDashboardPage extends StatelessWidget {
               style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ===== helper item ikon dashboard =====
+  Widget _buildDashboardIconItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: primaryColor,
+                size: 30,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

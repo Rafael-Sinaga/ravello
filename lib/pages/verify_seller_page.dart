@@ -104,6 +104,10 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     setState(() => isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
 
+    // Simpan nama toko ke SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('storeName', nameController.text);
+
     if (mounted) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,8 +225,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                             controller: nameController,
                             maxLength: 50,
                             decoration: const InputDecoration(
-                              labelText: 'Nama',
-                              hintText: 'Masukkan nama',
+                              labelText: 'Nama Toko',
+                              hintText: 'Masukkan nama toko',
                               border: OutlineInputBorder(),
                             ),
                           ),
