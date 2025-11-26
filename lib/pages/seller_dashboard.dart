@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_page.dart'; // pastikan ini benar sesuai struktur projectmu
 import 'manage_products_page.dart'; // ⬅️ IMPORT
+import 'seller_finance_page.dart'; // ⬅️ IMPORT HALAMAN KEUANGAN
 
 class SellerDashboardPage extends StatefulWidget {
   const SellerDashboardPage({super.key});
@@ -41,7 +42,16 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
-        automaticallyImplyLeading: false, // alur tetap, tidak ada tombol back
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
+            );
+          },
+        ),
         title: const Text(
           'Profil Penjual',
           style: TextStyle(
@@ -49,18 +59,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
             fontSize: 18,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {}, // logika tetap
-            child: const Text(
-              'Edit',
-              style: TextStyle(
-                color: primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -130,6 +128,49 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             const SizedBox(height: 20),
 
+            // ===================== MENU IKON (HANYA KEUANGAN & PUSAT BANTUAN) =====================
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _buildDashboardIconItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Keuangan',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SellerFinancePage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDashboardIconItem(
+                    icon: Icons.help_outline,
+                    title: 'Pusat Bantuan',
+                    onTap: () {
+                      // TODO: sambungkan ke pusat bantuan / FAQ jika sudah ada
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             // ===================== GRAFIK PENJUALAN (GARIS INTERAKTIF) =====================
             const Text(
               'Grafik Penjualan',
@@ -167,56 +208,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
               child: SalesLineChart(
                 data: salesData,
                 labels: dayLabels,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ===================== MENU IKON (PRODUK / KEUANGAN / PUSAT BANTUAN) =====================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.12)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _buildDashboardIconItem(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'Produk',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ManageProductsPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDashboardIconItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Keuangan',
-                    onTap: () {
-                      // TODO: tambahkan halaman keuangan jika sudah ada
-                    },
-                  ),
-                  _buildDashboardIconItem(
-                    icon: Icons.help_outline,
-                    title: 'Pusat Bantuan',
-                    onTap: () {
-                      // TODO: sambungkan ke pusat bantuan / FAQ jika sudah ada
-                    },
-                  ),
-                ],
               ),
             ),
 
@@ -343,31 +334,8 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
               ),
             ),
 
-            const SizedBox(height: 32),
-
-            // ===================== KELUAR SEBAGAI PENJUAL =====================
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  // alur keluar tetap sama
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ProfilePage(),
-                    ),
-                    (route) => false,
-                  );
-                },
-                child: const Text(
-                  'Keluar sebagai Penjual',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 24),
+            // 👆 Tidak ada lagi tombol "Keluar sebagai Penjual"
           ],
         ),
       ),

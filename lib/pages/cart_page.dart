@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../models/product_model.dart';
 import 'checkout_page.dart';
 import '../widgets/navbar.dart';
-import 'home_page.dart';
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
@@ -53,12 +53,12 @@ class CartPage extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     itemCount: cart.items.length,
                     itemBuilder: (context, index) {
-                      final product = cart.items[index];
+                      // asumsikan List<Product>
+                      final product = cart.items[index] as Product;
 
-                      // Pastikan properti sesuai Product model: imagePath, name, price
-                      final imagePath = (product.imagePath ?? '') as String;
-                      final name = (product.name ?? '') as String;
-                      final price = product.price; // int or double
+                      final imagePath = product.imagePath;
+                      final name = product.name;
+                      final price = product.price;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -81,7 +81,7 @@ class CartPage extends StatelessWidget {
                           contentPadding: const EdgeInsets.all(12),
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: (imagePath.isNotEmpty)
+                            child: imagePath.isNotEmpty
                                 ? Image.asset(
                                     imagePath,
                                     width: 60,
@@ -166,7 +166,6 @@ class CartPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        // notifikasi kecil
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Color(0xFF124170),
@@ -221,8 +220,7 @@ class CartPage extends StatelessWidget {
   }
 
   String _formatPrice(dynamic price) {
-    // pastikan price berupa int
-    final intValue = (price is int) ? price : (price as double).toInt();
+    final intValue = (price is int) ? price : (price as num).toInt();
     final s = intValue.toString();
     final buffer = StringBuffer();
     int count = 0;

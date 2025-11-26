@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
+import 'checkout_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DetailProduct extends StatefulWidget {
@@ -327,7 +328,23 @@ class _DetailProductState extends State<DetailProduct> {
 
             Expanded(
               child: OutlinedButton(
-                onPressed: () => Navigator.pushNamed(context, '/checkout'),
+                onPressed: () {
+                  // WAJIB pilih ukuran dulu
+                  if (selectedSize == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Pilih ukuran terlebih dahulu!'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  // optional: pastikan produk ikut masuk ke cart
+                  cartProvider.addToCart(widget.product);
+
+                  // direct ke halaman checkout
+                  Navigator.pushNamed(context, '/checkout');
+                },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF124170)),
                   shape: RoundedRectangleBorder(

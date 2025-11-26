@@ -34,6 +34,10 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: primaryColor),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Kelola Produk',
           style: TextStyle(
