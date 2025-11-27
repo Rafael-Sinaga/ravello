@@ -1,6 +1,11 @@
 // lib/pages/seller_dashboard.dart
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/auth_service.dart';
 import 'profile_page.dart';
 import 'manage_products_page.dart';
 import 'seller_finance_page.dart';
@@ -18,11 +23,13 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
   String storeName = 'Nama Toko';
+  String? _profileImagePath; // foto profil / toko
 
   @override
   void initState() {
     super.initState();
     _loadStoreName();
+    _loadProfileImage();
   }
 
   Future<void> _loadStoreName() async {
@@ -32,9 +39,17 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
     });
   }
 
+  Future<void> _loadProfileImage() async {
+    final path = await AuthService.getProfileImagePath();
+    if (!mounted) return;
+    setState(() {
+      _profileImagePath = path;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Data dummy untuk grafik penjualan (misal 7 hari terakhir)
+    // Sementara masih dummy untuk grafik penjualan
     final List<double> salesData = [12, 8, 14, 10, 18, 9, 15];
     final List<String> dayLabels = [
       'Sen',
@@ -92,14 +107,23 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
               ),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(50),
-                    child: Image.asset(
-                      'assets/images/Profile.png',
-                      width: 70,
-                      height: 70,
-                      fit: BoxFit.cover,
-                    ),
+                  // FOTO TOKO / PROFIL DINAMIS
+                  CircleAvatar(
+                    radius: 35,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    backgroundImage: _profileImagePath != null
+                        ? (kIsWeb
+                            ? NetworkImage(_profileImagePath!)
+                            : FileImage(File(_profileImagePath!))
+                                as ImageProvider)
+                        : const AssetImage('assets/images/Profile.png'),
+                    child: _profileImagePath == null
+                        ? const Icon(
+                            Icons.storefront_outlined,
+                            size: 30,
+                            color: Color(0xFF9CA3AF),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -257,7 +281,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
                   Expanded(
                     child: _buildStatusItem(
                       title: 'Perlu dikirim',
-                      value: '3', // dummy tampilan
+                      value: '3', // TODO: ganti dari API
                     ),
                   ),
                   _verticalDivider(),

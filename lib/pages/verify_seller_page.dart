@@ -1,5 +1,5 @@
 import '../services/auth_service.dart';
-import '../services/seller_service.dart'; // <-- TAMBAHAN IMPORT SERVICE
+import '../services/seller_service.dart'; // <--- IMPORT UNTUK HIT BACKEND
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -21,12 +21,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController nikController = TextEditingController();
 
-  // ====== TAMBAHAN: DESKRIPSI & ALAMAT TOKO (UNTUK BACKEND) ======
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
-  // ===============================================================
+  // -------- INFORMASI TOKO (UNTUK BACKEND) --------
+  final TextEditingController storeDescController = TextEditingController();
+  final TextEditingController storeAddressController = TextEditingController();
 
-  // =============== TAMBAHAN: REKENING BANK ===============
+  // =============== REKENING BANK ===============
   final TextEditingController bankAccountController = TextEditingController();
   final TextEditingController bankHolderController = TextEditingController();
   String? selectedBank;
@@ -42,7 +41,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     'Permata',
     'SeaBank',
   ];
-  // =======================================================
+  // ============================================
 
   bool agreeTerms = false;
   XFile? ktpImage;
@@ -100,13 +99,14 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     } catch (e) {
       debugPrint("Error verifying face: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
+        const SnackBar(
+            content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
       );
     }
   }
 
   Future<void> _submitVerification() async {
-    // validasi persetujuan
+    // ------- VALIDASI FORM DASAR -------
     if (!agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -116,7 +116,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       return;
     }
 
-    // validasi data utama
     if (nameController.text.isEmpty ||
         nikController.text.isEmpty ||
         ktpImage == null ||
@@ -129,7 +128,19 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       return;
     }
 
-    // ========== VALIDASI TAMBAHAN: DATA REKENING ==========
+    // VALIDASI deskripsi & alamat toko (buat ke backend)
+    if (storeDescController.text.isEmpty ||
+        storeAddressController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Harap isi deskripsi toko dan alamat toko terlebih dahulu.'),
+        ),
+      );
+      return;
+    }
+
+    // VALIDASI REKENING
     if (selectedBank == null ||
         bankAccountController.text.isEmpty ||
         bankHolderController.text.isEmpty) {
@@ -140,60 +151,65 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       );
       return;
     }
-    // ======================================================
 
     setState(() => isLoading = true);
 
     try {
-      // ====== PANGGIL BACKEND UNTUK DAFTAR TOKO ======
+      // ====== HIT BACKEND UNTUK DAFTAR TOKO ======
       final result = await SellerService.registerStore(
         storeName: nameController.text.trim(),
-        description: descriptionController.text.trim(),
-        address: addressController.text.trim(),
+        description: storeDescController.text.trim(),
+        address: storeAddressController.text.trim(),
       );
 
-      if (!mounted) return;
-
       if (result['success'] != true) {
-        // jika backend menolak (misal user sudah punya toko)
+        if (!mounted) return;
+        setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal mendaftarkan toko.'),
-            backgroundColor: Colors.redAccent,
+            content: Text(
+              result['message'] ?? 'Gagal mendaftar sebagai penjual.',
+            ),
           ),
         );
-        setState(() => isLoading = false);
         return;
       }
-      // ================================================
 
-      // Simpan nama toko + info rekening ke SharedPreferences
+      // ====== JIKA SUKSES, SIMPAN LOKAL & UPDATE STATUS SELLER ======
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('storeName', nameController.text);
+
+      await prefs.setString('storeName', nameController.text.trim());
       await prefs.setString('storeBankName', selectedBank ?? '');
       await prefs.setString(
-          'storeBankAccountNumber', bankAccountController.text);
+          'storeBankAccountNumber', bankAccountController.text.trim());
       await prefs.setString(
-          'storeBankAccountHolder', bankHolderController.text);
+          'storeBankAccountHolder', bankHolderController.text.trim());
+      await prefs.setString(
+          'storeAddress', storeAddressController.text.trim());
+      await prefs.setString(
+          'storeDescription', storeDescController.text.trim());
 
-      // optional: simpan store_id dari backend kalau mau dipakai
-      if (result['store_id'] != null) {
-        await prefs.setInt('storeId', result['store_id'] as int);
+      // simpan store_id kalau dikirim backend
+      final storeId = result['store_id'];
+      if (storeId is int) {
+        await prefs.setInt('storeId', storeId);
       }
 
-      // Update status seller di memory + persist
+      await prefs.setBool('isSeller', true);
       await AuthService.setSellerStatus(true);
 
+      if (!mounted) return;
       setState(() => isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(result['message'] ?? 'Verifikasi berhasil!'),
-          backgroundColor: const Color(0xFF124170),
+          content: Text(
+            result['message'] ?? 'Verifikasi berhasil!',
+          ),
         ),
       );
 
+      // pindah ke dashboard penjual
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -206,7 +222,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.redAccent,
         ),
       );
     }
@@ -244,8 +259,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   void dispose() {
     nameController.dispose();
     nikController.dispose();
-    descriptionController.dispose(); // <-- TAMBAHAN
-    addressController.dispose();     // <-- TAMBAHAN
+    storeDescController.dispose();
+    storeAddressController.dispose();
     bankAccountController.dispose();
     bankHolderController.dispose();
     super.dispose();
@@ -394,32 +409,30 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
                         ),
                         const SizedBox(height: 10),
                         TextField(
+                          controller: storeDescController,
+                          maxLines: 3,
+                          decoration: _fieldDecoration(
+                            label: 'Deskripsi Toko',
+                            hint: 'Ceritakan secara singkat tentang tokomu',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: storeAddressController,
+                          maxLines: 2,
+                          decoration: _fieldDecoration(
+                            label: 'Alamat Toko',
+                            hint: 'Alamat lengkap toko / gudang',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
                           controller: nikController,
                           maxLength: 16,
                           keyboardType: TextInputType.number,
                           decoration: _fieldDecoration(
                             label: 'NIK',
                             hint: 'Masukkan NIK',
-                          ).copyWith(counterText: ''),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: descriptionController,
-                          maxLines: 2,
-                          maxLength: 120,
-                          decoration: _fieldDecoration(
-                            label: 'Deskripsi Toko',
-                            hint: 'Contoh: Menjual jersey original dan aksesoris',
-                          ).copyWith(counterText: ''),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: addressController,
-                          maxLines: 2,
-                          maxLength: 160,
-                          decoration: _fieldDecoration(
-                            label: 'Alamat Toko',
-                            hint: 'Masukkan alamat toko / gudang utama',
                           ).copyWith(counterText: ''),
                         ),
                       ],

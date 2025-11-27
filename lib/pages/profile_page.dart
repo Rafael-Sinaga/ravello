@@ -1,6 +1,8 @@
 // lib/pages/profile_page.dart
 // === PROFILE PAGE FINAL ===
 
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
@@ -10,7 +12,6 @@ import 'verify_seller_page.dart';
 import 'onboarding.dart';
 import '../services/auth_service.dart';
 import 'seller_dashboard.dart'; // untuk navigasi langsung ke profil penjual
-import 'edit_profile_page.dart'; // <-- Tambahan import
 
 // ======================================================
 // ========== CUSTOMER SERVICE PAGE (NO LAUNCHER) ========
@@ -37,7 +38,6 @@ class CustomerServicePage extends StatelessWidget {
         elevation: 0,
       ),
       backgroundColor: const Color(0xFFF8FBFD),
-
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Container(
@@ -55,7 +55,6 @@ class CustomerServicePage extends StatelessWidget {
               ),
             ],
           ),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
@@ -68,7 +67,6 @@ class CustomerServicePage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 12),
-
               Text(
                 'Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi layanan pelanggan melalui detail berikut:',
                 style: TextStyle(
@@ -76,9 +74,7 @@ class CustomerServicePage extends StatelessWidget {
                   fontSize: 14,
                 ),
               ),
-
               SizedBox(height: 20),
-
               Text(
                 'Email:',
                 style: TextStyle(
@@ -87,9 +83,7 @@ class CustomerServicePage extends StatelessWidget {
                 ),
               ),
               Text('support@tokoapp.com'),
-
               SizedBox(height: 16),
-
               Text(
                 'Jam Operasional:',
                 style: TextStyle(
@@ -128,7 +122,6 @@ class FAQPage extends StatelessWidget {
         elevation: 0,
       ),
       backgroundColor: const Color(0xFFF8FBFD),
-
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
@@ -172,14 +165,17 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String? _overrideName;
   String? _overrideDescription;
+  String? _profileImagePath; // path foto profil
+  String? _phoneNumber; // nomor telepon
 
   @override
   void initState() {
     super.initState();
-    // Debug
     print('User saat ini di ProfilePage: ${AuthService.currentUser?.name}');
     _loadSellerStatus();
     _loadLocalDescription();
+    _loadProfileImage();
+    _loadLocalNameAndPhone();
   }
 
   Future<void> _loadSellerStatus() async {
@@ -196,14 +192,169 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _refreshSellerStatus() async {
     await _loadSellerStatus();
     _loadLocalDescription();
+    _loadProfileImage();
+    _loadLocalNameAndPhone();
   }
 
   Future<void> _loadLocalDescription() async {
     final prefs = await SharedPreferences.getInstance();
     final desc = prefs.getString('user_description');
+    if (!mounted) return;
     if (desc != null && desc.isNotEmpty) {
       setState(() => _overrideDescription = desc);
     }
+  }
+
+  Future<void> _loadLocalNameAndPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedName = prefs.getString('current_user_name');
+    final savedPhone = prefs.getString('user_phone');
+
+    if (!mounted) return;
+    setState(() {
+      _overrideName = savedName;
+      _phoneNumber = savedPhone;
+    });
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final path = prefs.getString('profile_image_path');
+    if (!mounted) return;
+    setState(() => _profileImagePath = path);
+  }
+
+  // =============== SHEET EDIT PROFIL (NAMA + NO HP) ===============
+  void _openEditProfileSheet() async {
+    final nameController = TextEditingController(
+      text: _overrideName ?? AuthService.currentUser?.name ?? '',
+    );
+    final phoneController = TextEditingController(
+      text: _phoneNumber ?? '',
+    );
+    final descController = TextEditingController(
+      text: _overrideDescription ?? '',
+    );
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: SizedBox(
+                  width: 40,
+                  child: Divider(
+                    thickness: 3,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Edit Profil',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF124170),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nama',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor Telepon',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Deskripsi singkat',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Batal'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newName = nameController.text.trim();
+                        final newPhone = phoneController.text.trim();
+                        final newDesc = descController.text.trim();
+
+                        if (newName.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Nama tidak boleh kosong')),
+                          );
+                          return;
+                        }
+
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('current_user_name', newName);
+                        await prefs.setString('user_phone', newPhone);
+                        await prefs.setString('user_description', newDesc);
+
+                        // ❌ TIDAK LAGI edit AuthService.currentUser!.name
+                        // cukup pakai override + prefs
+
+                        if (!mounted) return;
+                        setState(() {
+                          _overrideName = newName;
+                          _overrideDescription = newDesc;
+                          _phoneNumber = newPhone;
+                        });
+
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF124170),
+                      ),
+                      child: const Text(
+                        'Simpan',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -211,8 +362,10 @@ class _ProfilePageState extends State<ProfilePage> {
     const Color primaryColor = Color(0xFF124170);
     const Color lightBackground = Color(0xFFF8FBFD);
 
-    final nameToShow = _overrideName ?? AuthService.currentUser?.name ?? 'Pengguna';
-    final emailToShow = AuthService.currentUser?.email ?? 'Email tidak tersedia';
+    final nameToShow =
+        _overrideName ?? AuthService.currentUser?.name ?? 'Pengguna';
+    final emailToShow =
+        AuthService.currentUser?.email ?? 'Email tidak tersedia';
     final descToShow = _overrideDescription;
 
     return WillPopScope(
@@ -255,7 +408,8 @@ class _ProfilePageState extends State<ProfilePage> {
               // ================= KARTU PROFIL ===================
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -270,25 +424,35 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
+                    // FOTO PROFIL DINAMIS
+                    CircleAvatar(
                       radius: 32,
-                      backgroundImage: AssetImage('assets/images/profile.png'),
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      backgroundImage: _profileImagePath != null
+                          ? (kIsWeb
+                              ? NetworkImage(_profileImagePath!)
+                              : FileImage(File(_profileImagePath!))
+                                  as ImageProvider)
+                          : null,
+                      child: _profileImagePath == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: Color(0xFF9CA3AF),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                          );
-                        },
+                        onTap: _openEditProfileSheet,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Halo,',
-                              style: TextStyle(color: Color(0xFF6F7A74), fontSize: 13),
+                              style: TextStyle(
+                                  color: Color(0xFF6F7A74), fontSize: 13),
                             ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -310,8 +474,21 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             Text(
                               emailToShow,
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 13),
                             ),
+                            if (_phoneNumber != null &&
+                                _phoneNumber!.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  _phoneNumber!,
+                                  style: const TextStyle(
+                                    color: Color(0xFF6F7A74),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
                             if (descToShow != null && descToShow.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 6),
@@ -344,14 +521,16 @@ class _ProfilePageState extends State<ProfilePage> {
                     if (AuthService.currentUser?.isSeller == true) {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SellerDashboardPage()),
+                        MaterialPageRoute(
+                            builder: (context) => const SellerDashboardPage()),
                       ).then((_) {
                         _refreshSellerStatus();
                       });
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const VerifySellerPage()),
+                        MaterialPageRoute(
+                            builder: (context) => const VerifySellerPage()),
                       ).then((_) {
                         _refreshSellerStatus();
                       });
@@ -403,7 +582,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const OrderPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const OrderPage()),
                         );
                       },
                     ),
@@ -413,7 +593,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: Icons.favorite_border_rounded,
                       title: 'Favorit Saya',
                       subtitle: 'Tinjau barang favoritmu',
-                      onTap: () => Navigator.pushReplacementNamed(context, '/favorite'),
+                      onTap: () =>
+                          Navigator.pushReplacementNamed(context, '/favorite'),
                     ),
                   ],
                 ),
@@ -446,7 +627,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const FAQPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const FAQPage()),
                         );
                       },
                     ),
@@ -459,7 +641,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CustomerServicePage()),
+                          MaterialPageRoute(
+                              builder: (_) => const CustomerServicePage()),
                         );
                       },
                     ),
@@ -479,14 +662,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Konfirmasi Keluar'),
-                          content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+                          content: const Text(
+                              'Apakah Anda yakin ingin keluar dari akun ini?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
                               child: const Text('Batal'),
                             ),
                             ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor),
                               onPressed: () => Navigator.pop(context, true),
                               child: const Text('Keluar'),
                             ),
@@ -499,7 +684,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         if (!mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (context) => const OnboardingPage()),
+                          MaterialPageRoute(
+                              builder: (context) => const OnboardingPage()),
                           (route) => false,
                         );
                       }
@@ -518,7 +704,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
-                        side: const BorderSide(color: primaryColor, width: 0.5),
+                        side:
+                            const BorderSide(color: primaryColor, width: 0.5),
                       ),
                     ),
                   ),

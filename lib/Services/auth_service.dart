@@ -39,11 +39,13 @@ class AuthService {
           id: int.tryParse(id.toString()) ?? 0,
           name: name.toString(),
           email: mail.toString(),
-          isSeller: (data['isSeller'] ?? data['user']?['isSeller'] ?? false) == true,
+          isSeller:
+              (data['isSeller'] ?? data['user']?['isSeller'] ?? false) == true,
         );
 
         final prefs = await SharedPreferences.getInstance();
-        final localSellerStatus = prefs.getBool('isSeller') ?? currentUser!.isSeller;
+        final localSellerStatus =
+            prefs.getBool('isSeller') ?? currentUser!.isSeller;
         currentUser!.isSeller = localSellerStatus;
 
         print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
@@ -93,7 +95,8 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': 'Registrasi gagal (${response.statusCode}): ${response.body}',
+          'message':
+              'Registrasi gagal (${response.statusCode}): ${response.body}',
         };
       }
     } catch (e) {
@@ -130,7 +133,8 @@ class AuthService {
   }
 
   /// ✅ VERIFIKASI OTP (email + kode OTP)
-  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+  static Future<Map<String, dynamic>> verifyOtp(
+      String email, String otp) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/postClient/verify-otp');
 
     try {
@@ -180,6 +184,9 @@ class AuthService {
       if (prefs.containsKey('isSeller')) {
         await prefs.remove('isSeller');
       }
+      if (prefs.containsKey('profile_image_path')) {
+        await prefs.remove('profile_image_path');
+      }
 
       currentUser = null;
       token = null;
@@ -189,6 +196,28 @@ class AuthService {
       print('AuthService.logout error: $e');
       currentUser = null;
       token = null;
+    }
+  }
+
+  /// 🔐 Ambil token dari memori / SharedPreferences
+  static Future<String?> getToken() async {
+    // kalau sudah ada di memori, langsung pakai
+    if (token != null && token!.isNotEmpty) {
+      return token;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString('auth_token');
+
+      if (stored != null && stored.isNotEmpty) {
+        token = stored;
+        return token;
+      }
+      return null;
+    } catch (e) {
+      print('AuthService.getToken error: $e');
+      return null;
     }
   }
 
@@ -202,5 +231,17 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isSeller', status);
     }
+  }
+
+  /// 📸 Simpan path foto profil
+  static Future<void> setProfileImagePath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_image_path', path);
+  }
+
+  /// 📸 Ambil path foto profil (nullable)
+  static Future<String?> getProfileImagePath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('profile_image_path');
   }
 }

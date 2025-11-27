@@ -1,4 +1,10 @@
+// lib/pages/manage_products_page.dart
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/product_service.dart';
 
 class ManageProductsPage extends StatefulWidget {
   const ManageProductsPage({super.key});
@@ -11,20 +17,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   static const Color primaryColor = Color(0xFF124170);
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
-  final List<_ProductItem> _products = [
-    _ProductItem(
-      name: 'Serum Wajah Organik',
-      price: 75000,
-      stock: 12,
-      description: 'Serum wajah dengan bahan alami untuk kulit cerah dan lembap.',
-    ),
-    _ProductItem(
-      name: 'Face Wash Tea Tree',
-      price: 52000,
-      stock: 20,
-      description: 'Pembersih wajah untuk kulit berminyak dan berjerawat.',
-    ),
-  ];
+  // list produk (awal kosong, tidak ada dummy)
+  final List<_ProductItem> _products = [];
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +124,35 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   // ================== KARTU PRODUK ==================
 
   Widget _buildProductCard(_ProductItem product, int index) {
+    Widget _buildThumb() {
+      if (product.imagePath == null) {
+        return const Icon(
+          Icons.image_outlined,
+          color: primaryColor,
+        );
+      }
+
+      if (kIsWeb) {
+        // Flutter Web → pakai network
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            product.imagePath!,
+            fit: BoxFit.cover,
+          ),
+        );
+      } else {
+        // Mobile / desktop → pakai File
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.file(
+            File(product.imagePath!),
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -153,10 +176,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
             color: const Color(0xFFE3ECF4),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(
-            Icons.image_outlined,
-            color: primaryColor,
-          ),
+          child: _buildThumb(),
         ),
         title: Text(
           product.name,
@@ -193,7 +213,11 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'edit') {
-              _openAddProductSheet(editing: true, product: product, index: index);
+              _openAddProductSheet(
+                editing: true,
+                product: product,
+                index: index,
+              );
             } else if (value == 'delete') {
               setState(() {
                 _products.removeAt(index);
@@ -230,6 +254,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         TextEditingController(text: editing ? product?.stock.toString() : '');
     final descController =
         TextEditingController(text: editing ? product?.description : '');
+    XFile? pickedImage = editing && product?.imagePath != null
+        ? XFile(product!.imagePath!)
+        : null;
 
     showModalBottomSheet(
       context: context,
@@ -239,233 +266,315 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 14,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                Text(
-                  editing ? 'Edit Produk' : 'Tambah Produk',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 14),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> _pickImage() async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? img = await picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 80,
+              );
+              if (img != null) {
+                setModalState(() {
+                  pickedImage = img;
+                });
+              }
+            }
 
-                // Upload gambar
-                GestureDetector(
-                  onTap: () {
-                    // TODO: sambungkan ke ImagePicker / upload gambar
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur upload gambar belum dihubungkan.'),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 14, horizontal: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.grey.withOpacity(0.4),
+            Widget _buildPreview() {
+              if (pickedImage == null) {
+                return const Icon(
+                  Icons.cloud_upload_outlined,
+                  color: primaryColor,
+                );
+              }
+
+              if (kIsWeb) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    pickedImage!.path,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              } else {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(pickedImage!.path),
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 14,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: const [
-                        Icon(
-                          Icons.cloud_upload_outlined,
-                          color: primaryColor,
+                    Text(
+                      editing ? 'Edit Produk' : 'Tambah Produk',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Upload gambar
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.4),
+                          ),
                         ),
-                        SizedBox(width: 10),
-                        Text(
-                          'Upload Foto Produk',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6F7A74),
+                        child: Row(
+                          children: [
+                            _buildPreview(),
+                            const SizedBox(width: 10),
+                            Text(
+                              pickedImage != null
+                                  ? 'Ubah Foto Produk'
+                                  : 'Upload Foto Produk',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6F7A74),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Nama produk
+                    const Text(
+                      'Nama Produk',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: nameController,
+                      decoration: _inputDecoration('Masukkan nama produk'),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Harga & stok (2 kolom)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Harga',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: priceController,
+                                keyboardType: TextInputType.number,
+                                decoration: _inputDecoration('Rp'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Stok',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: stockController,
+                                keyboardType: TextInputType.number,
+                                decoration: _inputDecoration('0'),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
-                // Nama produk
-                const Text(
-                  'Nama Produk',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: nameController,
-                  decoration: _inputDecoration('Masukkan nama produk'),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Harga & stok (2 kolom)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Harga',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: priceController,
-                            keyboardType: TextInputType.number,
-                            decoration: _inputDecoration('Rp'),
-                          ),
-                        ],
+                    // Deskripsi
+                    const Text(
+                      'Deskripsi',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Stok',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: primaryColor,
-                            ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      decoration:
+                          _inputDecoration('Tuliskan deskripsi produk'),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: stockController,
-                            keyboardType: TextInputType.number,
-                            decoration: _inputDecoration('0'),
+                        ),
+                        onPressed: () async {
+                          final name = nameController.text.trim();
+                          final priceText = priceController.text.trim();
+                          final stockText = stockController.text.trim();
+                          final desc = descController.text.trim();
+
+                          if (name.isEmpty ||
+                              priceText.isEmpty ||
+                              stockText.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Nama, harga, dan stok wajib diisi.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final price = double.tryParse(priceText) ?? 0;
+                          final stock = int.tryParse(stockText) ?? 0;
+
+                          if (editing && product != null && index != null) {
+                            setState(() {
+                              _products[index] = _ProductItem(
+                                name: name,
+                                price: price,
+                                stock: stock,
+                                description: desc,
+                                imagePath: pickedImage?.path,
+                              );
+                            });
+
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Perubahan produk disimpan di aplikasi.'),
+                              ),
+                            );
+                          } else {
+                            final result = await ProductService.createProduct(
+                              name: name,
+                              description: desc,
+                              price: price,
+                              stock: stock,
+                              categoryId: 1,
+                            );
+
+                            if (!mounted) return;
+
+                            if (result['success'] == true) {
+                              setState(() {
+                                _products.add(
+                                  _ProductItem(
+                                    name: name,
+                                    price: price,
+                                    stock: stock,
+                                    description: desc,
+                                    imagePath: pickedImage?.path,
+                                  ),
+                                );
+                              });
+
+                              Navigator.pop(context);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    result['message'] ??
+                                        'Produk berhasil ditambahkan.',
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    result['message'] ??
+                                        'Gagal menambahkan produk.',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Text(
+                          editing ? 'Simpan Perubahan' : 'Simpan Produk',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 12),
-
-                // Deskripsi
-                const Text(
-                  'Deskripsi',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: _inputDecoration('Tuliskan deskripsi produk'),
-                ),
-
-                const SizedBox(height: 18),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      final name = nameController.text.trim();
-                      final priceText = priceController.text.trim();
-                      final stockText = stockController.text.trim();
-
-                      if (name.isEmpty ||
-                          priceText.isEmpty ||
-                          stockText.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content:
-                                Text('Nama, harga, dan stok wajib diisi.'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final price = double.tryParse(priceText) ?? 0;
-                      final stock = int.tryParse(stockText) ?? 0;
-
-                      if (editing && product != null && index != null) {
-                        setState(() {
-                          _products[index] = _ProductItem(
-                            name: name,
-                            price: price,
-                            stock: stock,
-                            description: descController.text.trim(),
-                          );
-                        });
-                      } else {
-                        setState(() {
-                          _products.add(
-                            _ProductItem(
-                              name: name,
-                              price: price,
-                              stock: stock,
-                              description: descController.text.trim(),
-                            ),
-                          );
-                        });
-                      }
-
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      editing ? 'Simpan Perubahan' : 'Simpan Produk',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -504,11 +613,13 @@ class _ProductItem {
   final double price;
   final int stock;
   final String description;
+  final String? imagePath;
 
   _ProductItem({
     required this.name,
     required this.price,
     required this.stock,
     required this.description,
+    this.imagePath,
   });
 }

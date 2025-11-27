@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
@@ -23,10 +25,19 @@ class _HomePageState extends State<HomePage> {
   Timer? _promoTimer;
   String? selectedCategory;
 
+  String? _profileImagePath; // <-- path foto profil (nullable)
+
   @override
   void initState() {
     super.initState();
     _startAutoScroll();
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    final path = await AuthService.getProfileImagePath();
+    if (!mounted) return;
+    setState(() => _profileImagePath = path);
   }
 
   void _startAutoScroll() {
@@ -73,13 +84,23 @@ class _HomePageState extends State<HomePage> {
                 // HEADER
                 Row(
                   children: [
-                    ClipOval(
-                      child: Image.asset(
-                        'assets/images/Profile.png',
-                        width: 45,
-                        height: 45,
-                        fit: BoxFit.cover,
-                      ),
+                    // FOTO PROFIL DINAMIS
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      backgroundImage: _profileImagePath != null
+                          ? (kIsWeb
+                              ? NetworkImage(_profileImagePath!)
+                              : FileImage(File(_profileImagePath!))
+                                  as ImageProvider)
+                          : null,
+                      child: _profileImagePath == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 24,
+                              color: Color(0xFF9CA3AF),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -139,10 +160,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                       ],
                     ),
-
-                    // ======================================
-                    // SETTINGS BUTTON — DITAMBAH NAVIGASI
-                    // ======================================
                     IconButton(
                       onPressed: () {
                         Navigator.push(
@@ -231,13 +248,15 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(width: 8),
                         _buildCategoryCircle(Icons.directions_walk, 'Trail'),
                         _buildCategoryCircle(Icons.remove_red_eye, 'Kacamata'),
-                        _buildCategoryCircle(Icons.shopping_bag_outlined, 'Busana'),
+                        _buildCategoryCircle(
+                            Icons.shopping_bag_outlined, 'Busana'),
                         _buildCategoryCircle(Icons.phone_android, 'Elektronik'),
                         _buildCategoryCircle(Icons.home_outlined, 'Dekorasi'),
                         _buildCategoryCircle(Icons.kitchen, 'Perabot'),
                         _buildCategoryCircle(Icons.watch, 'Jam Tangan'),
                         _buildCategoryCircle(Icons.spa, 'Kecantikan'),
-                        _buildCategoryCircle(Icons.local_florist, 'Tanaman Hias'),
+                        _buildCategoryCircle(
+                            Icons.local_florist, 'Tanaman Hias'),
                         const SizedBox(width: 8),
                       ],
                     ),
@@ -298,7 +317,7 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 20),
 
-                // PRODUK UNGGULAN
+                // PRODUK UNGULAN
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -417,8 +436,8 @@ class _HomePageState extends State<HomePage> {
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey,
-                                                  decoration:
-                                                      TextDecoration.lineThrough,
+                                                  decoration: TextDecoration
+                                                      .lineThrough,
                                                   fontFamily: 'Poppins',
                                                 ),
                                               ),
