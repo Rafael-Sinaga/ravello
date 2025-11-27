@@ -1,8 +1,10 @@
+// lib/pages/seller_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'profile_page.dart'; // pastikan ini benar sesuai struktur projectmu
-import 'manage_products_page.dart'; // ⬅️ IMPORT
-import 'seller_finance_page.dart'; // ⬅️ IMPORT HALAMAN KEUANGAN
+import 'profile_page.dart';
+import 'manage_products_page.dart';
+import 'seller_finance_page.dart';
+import 'seller_order_page.dart';
 
 class SellerDashboardPage extends StatefulWidget {
   const SellerDashboardPage({super.key});
@@ -34,7 +36,15 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
   Widget build(BuildContext context) {
     // Data dummy untuk grafik penjualan (misal 7 hari terakhir)
     final List<double> salesData = [12, 8, 14, 10, 18, 9, 15];
-    final List<String> dayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    final List<String> dayLabels = [
+      'Sen',
+      'Sel',
+      'Rab',
+      'Kam',
+      'Jum',
+      'Sab',
+      'Min'
+    ];
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -128,10 +138,11 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             const SizedBox(height: 20),
 
-            // ===================== MENU IKON (HANYA KEUANGAN & PUSAT BANTUAN) =====================
+            // ===================== MENU IKON =====================
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -171,7 +182,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             const SizedBox(height: 24),
 
-            // ===================== GRAFIK PENJUALAN (GARIS INTERAKTIF) =====================
+            // ===================== GRAFIK PENJUALAN =====================
             const Text(
               'Grafik Penjualan',
               style: TextStyle(
@@ -192,7 +203,8 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -226,7 +238,8 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -244,7 +257,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
                   Expanded(
                     child: _buildStatusItem(
                       title: 'Perlu dikirim',
-                      value: '3', // dummy untuk tampilan
+                      value: '3', // dummy tampilan
                     ),
                   ),
                   _verticalDivider(),
@@ -267,7 +280,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
             const SizedBox(height: 24),
 
-            // ===================== AKSI CEPAT (TETAP) =====================
+            // ===================== AKSI CEPAT =====================
             const Text(
               'Aksi Cepat',
               style: TextStyle(
@@ -278,7 +291,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
             ),
             const SizedBox(height: 12),
 
-            // Tombol KELOLA PRODUK sekarang diarahkan ke ManageProductsPage
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
@@ -297,14 +309,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
               },
               icon: const Icon(
                 Icons.storefront,
-                color: Colors.white, // ikon putih
+                color: Colors.white,
               ),
               label: const Text(
                 'Kelola Produk',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white, // teks putih
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -319,10 +331,17 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () {}, // tetap sama
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SellerOrderPage(),
+                  ),
+                );
+              },
               icon: const Icon(
                 Icons.receipt_long,
-                color: Colors.white, // biar konsisten juga putih
+                color: Colors.white,
               ),
               label: const Text(
                 'Lihat Transaksi',
@@ -335,7 +354,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
             ),
 
             const SizedBox(height: 24),
-            // 👆 Tidak ada lagi tombol "Keluar sebagai Penjual"
           ],
         ),
       ),
@@ -360,9 +378,9 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          '3', // value dummy tetap, kalau mau dinamis nanti bisa diganti
-          style: TextStyle(
+        Text(
+          value,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
             color: primaryColor,
@@ -381,7 +399,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
     );
   }
 
-  // Tetap ada kalau suatu saat mau dipakai lagi
   Widget _buildStatCard(IconData icon, String title, String value) {
     return Expanded(
       child: Container(
@@ -419,7 +436,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
     );
   }
 
-  // ===== helper item ikon dashboard =====
   Widget _buildDashboardIconItem({
     required IconData icon,
     required String title,
@@ -504,7 +520,8 @@ class _SalesLineChartState extends State<SalesLineChart> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final selectedIndex =
-            _selectedIndex ?? (widget.data.isNotEmpty ? widget.data.length - 1 : 0);
+            _selectedIndex ??
+                (widget.data.isNotEmpty ? widget.data.length - 1 : 0);
         final selectedValue =
             widget.data.isNotEmpty ? widget.data[selectedIndex].toInt() : 0;
         final selectedLabel =
@@ -513,7 +530,6 @@ class _SalesLineChartState extends State<SalesLineChart> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Info nilai yang dipilih
             if (widget.data.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -555,7 +571,6 @@ class _SalesLineChartState extends State<SalesLineChart> {
                   ),
                 ),
               ),
-
             SizedBox(
               height: 160,
               width: double.infinity,
@@ -625,10 +640,8 @@ class _SalesLineChartPainter extends CustomPainter {
     final double maxValue = data.reduce((a, b) => a > b ? a : b);
     final double normalizedMax = maxValue == 0 ? 1 : maxValue;
 
-    // Garis grid horizontal (3 level)
     for (int i = 0; i <= 3; i++) {
-      final double dy =
-          verticalPadding + (chartHeight / 3.0) * i; // dari atas ke bawah
+      final double dy = verticalPadding + (chartHeight / 3.0) * i;
       canvas.drawLine(
         Offset(horizontalPadding, dy),
         Offset(size.width - horizontalPadding, dy),
@@ -636,7 +649,6 @@ class _SalesLineChartPainter extends CustomPainter {
       );
     }
 
-    // Hitung titik-titik
     final Path linePath = Path();
     final Path fillPath = Path();
 
@@ -658,18 +670,15 @@ class _SalesLineChartPainter extends CustomPainter {
         fillPath.lineTo(x, y);
       }
 
-      // titik terakhir tutup ke bawah
       if (i == data.length - 1) {
         fillPath.lineTo(x, chartHeight + verticalPadding);
         fillPath.close();
       }
     }
 
-    // Gambar area fill + garis
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(linePath, linePaint);
 
-    // Gambar titik & highlight
     final Paint pointPaint = Paint()
       ..color = primaryColor
       ..style = PaintingStyle.fill;

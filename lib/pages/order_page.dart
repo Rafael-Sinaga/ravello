@@ -15,9 +15,6 @@ class _OrderPageState extends State<OrderPage> {
   static const Color primaryColor = Color(0xFF124170);
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
-  double _paymentProgress = 0; // untuk slider konfirmasi pembayaran
-  bool _paymentJustConfirmed = false;
-
   @override
   Widget build(BuildContext context) {
     final orders = Provider.of<OrderProvider>(context).orders;
@@ -130,10 +127,10 @@ class _OrderPageState extends State<OrderPage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Alamat Pengiriman',
                         style: TextStyle(
@@ -257,11 +254,11 @@ class _OrderPageState extends State<OrderPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(
+                                const Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                    children: const [
+                                    children: [
                                       SizedBox(height: 2),
                                       Text(
                                         'Pesanan akan diproses setelah pembayaran terkonfirmasi.',
@@ -300,117 +297,259 @@ class _OrderPageState extends State<OrderPage> {
                 ),
         ),
 
-        // SLIDER KONFIRMASI PEMBAYARAN
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: _buildPaymentSlider(),
-        ),
+        // BAR KONFIRMASI PEMBAYARAN (tanpa slider)
+        if (orders.isNotEmpty) _buildPaymentConfirmationBar(context),
       ],
     );
   }
 
-  Widget _buildPaymentSlider() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.grey.withOpacity(0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.lock_open_rounded,
-                  size: 18, color: primaryColor),
-              SizedBox(width: 6),
-              Text(
-                'Konfirmasi Pembayaran',
+  Widget _buildPaymentConfirmationBar(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                color: primaryColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Konfirmasi Pembayaran',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Upload bukti transfer untuk melanjutkan proses pesanan.',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: () {
+                _showUploadProofBottomSheet(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Upload\nBukti',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUploadProofBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 18,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const Text(
+                'Upload Bukti Pembayaran',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                   color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Pastikan foto bukti transfer jelas dan tidak blur.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Placeholder preview bukti (nanti lu sambung sama file / image)
+              Container(
+                width: double.infinity,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.receipt_long_outlined,
+                    size: 40,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        // TODO: buka galeri dan pilih gambar
+                      },
+                      icon: const Icon(Icons.photo_outlined, size: 18),
+                      label: const Text(
+                        'Galeri',
+                        style:
+                            TextStyle(fontFamily: 'Poppins', fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        side: const BorderSide(color: primaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        // TODO: buka kamera dan ambil foto
+                      },
+                      icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                      label: const Text(
+                        'Kamera',
+                        style:
+                            TextStyle(fontFamily: 'Poppins', fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        side: const BorderSide(color: primaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    // TODO:
+                    // 1. Validasi sudah ada gambar
+                    // 2. Upload ke server / simpan lokal
+                    // 3. Update status pesanan jadi "Menunggu Verifikasi" / "Diproses"
+                    // 4. Tutup sheet + kasih feedback
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Bukti pembayaran berhasil dikirim.'),
+                        backgroundColor: primaryColor,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Kirim Bukti',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Track "halus" dengan gradient tipis
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: LinearGradient(
-                colors: [
-                  primaryColor.withOpacity(0.06),
-                  primaryColor.withOpacity(0.02),
-                ],
-              ),
-            ),
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 8,
-                activeTrackColor: primaryColor,
-                inactiveTrackColor: Colors.transparent,
-                thumbColor: Colors.white,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 12),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 22),
-                overlayColor: primaryColor.withOpacity(0.15),
-              ),
-              child: Slider(
-                value: _paymentProgress,
-                min: 0,
-                max: 100,
-                onChanged: (value) {
-                  setState(() {
-                    _paymentProgress = value;
-                  });
-
-                  if (value >= 100 && !_paymentJustConfirmed) {
-                    _paymentJustConfirmed = true;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Pembayaran berhasil dikonfirmasi.'),
-                      ),
-                    );
-
-                    // reset slider dengan animasi kecil
-                    Future.delayed(const Duration(milliseconds: 700), () {
-                      if (!mounted) return;
-                      setState(() {
-                        _paymentProgress = 0;
-                        _paymentJustConfirmed = false;
-                      });
-                    });
-                  }
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _paymentProgress < 100
-                ? 'Geser penuh ke kanan untuk mengkonfirmasi pembayaran.'
-                : 'Melepas untuk menyelesaikan konfirmasi...',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF6F7A74),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -521,10 +660,10 @@ class _OrderPageState extends State<OrderPage> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           SizedBox(height: 2),
                           Text(
                             'Jersey Home 23/24 • Size M',

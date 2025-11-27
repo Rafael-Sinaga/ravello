@@ -61,12 +61,19 @@ class _FavoritePageState extends State<FavoritePage> {
         elevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          // <-- di sini perubahannya
+          onPressed: () {
+            // karena halaman favorit dibuka dari profil,
+            // back diarahkan kembali ke halaman profil
+            Navigator.pushReplacementNamed(context, '/profile');
+          },
         ),
         title: const Text(
           'Favorit Saya',
-          style:
-              TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF124170)),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF124170),
+          ),
         ),
       ),
       backgroundColor: const Color(0xFFF8FBFD),
