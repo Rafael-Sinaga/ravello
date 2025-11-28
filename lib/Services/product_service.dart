@@ -1,7 +1,10 @@
 // lib/services/product_service.dart
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import '../utils/api_config.dart';
 import 'auth_service.dart';
@@ -11,12 +14,17 @@ class ProductService {
   static const Duration _timeoutDuration = Duration(seconds: 15);
 
   /// Membuat produk baru untuk toko milik client yang sedang login
+  ///
+  /// [imageFile] boleh null:
+  /// - kalau null  -> kirim JSON biasa (logika lama, TANPA gambar)
+  /// - kalau tidak -> kirim multipart + field "image"
   static Future<Map<String, dynamic>> createProduct({
     required String name,
     required String description,
     required double price,
     required int stock,
     required int categoryId,
+    XFile? imageFile,
   }) async {
     try {
       final token = await AuthService.getToken();
@@ -38,26 +46,62 @@ class ProductService {
           'description: $description, '
           'price: $price, '
           'stock: $stock, '
-          'category_id: $categoryId'
+          'category_id: $categoryId, '
+          'hasImage: ${imageFile != null}'
           '}');
 
-      final response = await http
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              // ⚠️ WAJIB sama persis dengan backend
-              'product_name': name,
-              'description': description,
-              'price': price,
-              'stock': stock,
-              'category_id': categoryId,
-            }),
-          )
-          .timeout(_timeoutDuration);
+      http.Response response;
+
+      // ============================
+      // 1) TANPA GAMBAR → JSON BIASA
+      // ============================
+      if (imageFile == null) {
+        response = await http
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                // ⚠️ WAJIB sama persis dengan backend
+                'product_name': name,
+                'description': description,
+                'price': price,
+                'stock': stock,
+                'category_id': categoryId,
+              }),
+            )
+            .timeout(_timeoutDuration);
+      } else {
+        // =============================================
+        // 2) DENGAN GAMBAR → MULTIPART (AMAN UNTUK WEB)
+        // =============================================
+        final request = http.MultipartRequest('POST', url);
+        request.headers['Authorization'] = 'Bearer $token';
+
+        request.fields['product_name'] = name;
+        request.fields['description'] = description;
+        request.fields['price'] = price.toString();
+        request.fields['stock'] = stock.toString();
+        request.fields['category_id'] = categoryId.toString();
+
+        // Baca bytes dari XFile (bisa di web & mobile)
+        final bytes = await imageFile.readAsBytes();
+        final fileName = imageFile.name; // nama file asli
+
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image', // ⚠️ harus sama dengan upload.single('image')
+            bytes,
+            filename: fileName,
+          ),
+        );
+
+        final streamed =
+            await request.send().timeout(_timeoutDuration); // kirim
+        response = await http.Response.fromStream(streamed);
+      }
 
       print('CREATE PRODUCT status: ${response.statusCode}');
       final preview = response.body.length > 200
@@ -68,10 +112,9 @@ class ProductService {
       // Deteksi kalau server balikin HTML (endpoint salah)
       final contentType = response.headers['content-type'] ?? '';
       final bodyText = response.body.trim();
-      final bool looksLikeHtml =
-          bodyText.startsWith('<!DOCTYPE html') ||
-              bodyText.startsWith('<html') ||
-              contentType.contains('text/html');
+      final bool looksLikeHtml = bodyText.startsWith('<!DOCTYPE html') ||
+          bodyText.startsWith('<html') ||
+          contentType.contains('text/html');
 
       if (looksLikeHtml) {
         return {
@@ -101,8 +144,8 @@ class ProductService {
 
       return {
         'success': false,
-        'message': body['message'] ??
-            'Gagal menambahkan produk. (${response.statusCode})',
+        'message':
+            body['message'] ?? 'Gagal menambahkan produk. (${response.statusCode})',
         'raw': body,
       };
     } on TimeoutException catch (e) {
@@ -134,8 +177,7 @@ class ProductService {
       print('FETCH PRODUCTS body  : $preview');
 
       if (response.statusCode != 200) {
-        throw Exception(
-            'Gagal memuat produk. Status: ${response.statusCode}');
+        throw Exception('Gagal memuat produk. Status: ${response.statusCode}');
       }
 
       final decoded = jsonDecode(response.body);

@@ -168,6 +168,8 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _profileImagePath; // path foto profil
   String? _phoneNumber; // nomor telepon
 
+  bool _isSeller = false; // ← STATE LOKAL STATUS PENJUAL
+
   @override
   void initState() {
     super.initState();
@@ -179,14 +181,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadSellerStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final localSeller = prefs.getBool('isSeller');
-    if (localSeller != null) {
-      if (AuthService.currentUser != null) {
-        AuthService.currentUser!.isSeller = localSeller;
-      }
-      if (mounted) setState(() {});
-    }
+    // gunakan AuthService supaya sinkron dengan SharedPreferences
+    final status = await AuthService.getSellerStatus();
+    if (!mounted) return;
+    setState(() {
+      _isSeller = status;
+    });
   }
 
   Future<void> _refreshSellerStatus() async {
@@ -518,7 +518,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 margin: const EdgeInsets.only(bottom: 22),
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    if (AuthService.currentUser?.isSeller == true) {
+                    if (_isSeller) {
+                      // sudah penjual → ke dashboard
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -527,6 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         _refreshSellerStatus();
                       });
                     } else {
+                      // belum penjual → ke proses verifikasi
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -538,9 +540,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
                   label: Text(
-                    AuthService.currentUser?.isSeller == true
-                        ? 'Toko Saya'
-                        : 'Daftar sebagai Penjual',
+                    _isSeller ? 'Toko Saya' : 'Daftar sebagai Penjual',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -666,13 +666,15 @@ class _ProfilePageState extends State<ProfilePage> {
                               'Apakah Anda yakin ingin keluar dari akun ini?'),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context, false),
+                              onPressed: () =>
+                                  Navigator.pop(context, false),
                               child: const Text('Batal'),
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor),
-                              onPressed: () => Navigator.pop(context, true),
+                              onPressed: () =>
+                                  Navigator.pop(context, true),
                               child: const Text('Keluar'),
                             ),
                           ],
@@ -685,12 +687,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const OnboardingPage()),
+                              builder: (context) =>
+                                  const OnboardingPage()),
                           (route) => false,
                         );
                       }
                     },
-                    icon: const Icon(Icons.logout_rounded, color: primaryColor),
+                    icon:
+                        const Icon(Icons.logout_rounded, color: primaryColor),
                     label: const Text(
                       'Keluar',
                       style: TextStyle(
@@ -704,8 +708,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
-                        side:
-                            const BorderSide(color: primaryColor, width: 0.5),
+                        side: const BorderSide(
+                            color: primaryColor, width: 0.5),
                       ),
                     ),
                   ),

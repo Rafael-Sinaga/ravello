@@ -72,8 +72,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                     ),
                   )
                 : ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     itemCount: _products.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
@@ -486,8 +486,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               stockText.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content:
-                                    Text('Nama, harga, dan stok wajib diisi.'),
+                                content: Text(
+                                    'Nama, harga, dan stok wajib diisi.'),
                               ),
                             );
                             return;
@@ -515,12 +515,15 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               ),
                             );
                           } else {
-                            final result = await ProductService.createProduct(
+                            final result =
+                                await ProductService.createProduct(
                               name: name,
                               description: desc,
                               price: price,
                               stock: stock,
                               categoryId: 1,
+                              // ❌ di sini kita tidak lagi kirim imagePath,
+                              // karena belum didefinisikan di ProductService.
                             );
 
                             if (!mounted) return;
@@ -538,12 +541,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                 );
                               });
 
-                              // PERBAIKAN:
-                              // Baris lama disimpan sebagai komentar:
-                              // Navigator.pop(context);
-                              //
-                              // Baris baru mengirim "true" ke halaman pemanggil
-                              // supaya bisa refresh data / HomePage.
                               Navigator.pop(context, true);
 
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -601,9 +598,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
           color: Colors.grey.withOpacity(0.4),
         ),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderSide: BorderSide(
           color: primaryColor,
           width: 1.2,
         ),

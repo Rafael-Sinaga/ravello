@@ -11,8 +11,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   flutter_localizations:
-    sdk: flutter      # ← DITAMBAHKAN WAJIB
+    sdk: flutter        # ← WAJIB untuk localization
+
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   slide_to_act: ^2.0.2
@@ -29,7 +31,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: true        # ← DITAMBAHKAN (dibutuhkan oleh localization)
+  generate: true         # ← DIBUTUHKAN untuk localization
 
   assets:
     - assets/images/ravello_logo.png
