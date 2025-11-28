@@ -538,7 +538,13 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                 );
                               });
 
-                              Navigator.pop(context);
+                              // PERBAIKAN:
+                              // Baris lama disimpan sebagai komentar:
+                              // Navigator.pop(context);
+                              //
+                              // Baris baru mengirim "true" ke halaman pemanggil
+                              // supaya bisa refresh data / HomePage.
+                              Navigator.pop(context, true);
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(

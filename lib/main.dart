@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart'; // untuk kDebugMode
 
 // === Pages ===
 import 'package:ravello/pages/splash_screen.dart';
@@ -14,6 +15,11 @@ import 'package:ravello/pages/profile_page.dart';
 import 'package:ravello/pages/favorite_page.dart';
 import 'package:ravello/pages/order_page.dart';
 
+// ⭐ Seller-related pages
+// ⬇️ SUSUN SUPAYA SAMA DENGAN NAMA FILE YANG LU PUNYA
+import 'package:ravello/pages/verify_seller_Page.dart';
+import 'package:ravello/pages/seller_dashboard.dart';
+
 // === Providers ===
 import 'package:ravello/providers/cart_provider.dart';
 import 'package:ravello/providers/order_provider.dart';
@@ -23,7 +29,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()), // ✅ Tambahan provider baru
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: const RavelloApp(),
     ),
@@ -54,7 +60,12 @@ class RavelloApp extends StatelessWidget {
         '/checkout': (context) => const CheckoutPage(),
         '/profile': (context) => const ProfilePage(),
         '/favorite': (context) => const FavoritePage(),
-        '/orders': (context) => const OrderPage(), // ✅ route baru untuk halaman pesanan
+        '/orders': (context) => const OrderPage(),
+
+        // ⭐ Seller routes
+        '/verify-seller': (context) => const VerifySellerPage(),
+        // pastikan class di seller_dashboard.dart memang `SellerDashboardPage`
+        '/seller-dashboard': (context) => const SellerDashboardPage(),
       },
     );
   }
@@ -71,13 +82,20 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   @override
   void initState() {
     super.initState();
-    _navigateToOnboarding();
+    _navigateAfterSplash();
   }
 
-  Future<void> _navigateToOnboarding() async {
+  Future<void> _navigateAfterSplash() async {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/onboarding');
+
+    if (kDebugMode) {
+      // Saat debug, langsung ke home.
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      // Flow normal untuk release
+      Navigator.pushReplacementNamed(context, '/onboarding');
+    }
   }
 
   @override

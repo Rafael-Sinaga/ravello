@@ -1,5 +1,13 @@
 // lib/models/product_model.dart
 
+/// Helper kecil untuk parse integer yang bisa datang sebagai int / double / String
+int? _parseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
 class Product {
   final int? id;
   final String name;
@@ -56,7 +64,8 @@ class Product {
     }
 
     return Product(
-      id: json['product_id'] as int? ?? json['id'] as int?,
+      // ✅ pakai _parseInt supaya aman kalau backend ngirim "10" (String)
+      id: _parseInt(json['product_id'] ?? json['id']),
       name: json['product_name'] ?? json['name'] ?? '',
       price: price,
       // sementara kalau backend belum kirim image_url,
@@ -65,7 +74,7 @@ class Product {
       description: json['description'] ?? '',
       discount: discount,
       stock: stock,
-      categoryId: json['category_id'] as int?,
+      categoryId: _parseInt(json['category_id']),
     );
   }
 }

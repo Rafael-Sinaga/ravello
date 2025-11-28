@@ -23,40 +23,85 @@ class AuthService {
           )
           .timeout(_timeoutDuration);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('LOGIN status: ${response.statusCode}');
+      print('LOGIN body  : ${response.body}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final Map<String, dynamic> body =
+            jsonDecode(response.body) as Map<String, dynamic>;
 
-        token = data['token'];
+        // beberapa backend bungkus di "data"
+        final dynamic rootDynamic = body['data'] ?? body;
+        final Map<String, dynamic> root =
+            (rootDynamic is Map<String, dynamic>) ? rootDynamic : body;
 
-        final id = data['client_id'] ?? data['id'] ?? 0;
-        final name = data['name'] ?? data['user']?['name'] ?? '';
-        final mail = data['email'] ?? data['user']?['email'] ?? '';
+        // 🎯 coba ambil token dari beberapa field umum
+        final String? parsedToken =
+            (root['token'] ??
+                    body['token'] ??
+                    root['access_token'] ??
+                    body['access_token'])
+                ?.toString();
+
+        if (parsedToken == null || parsedToken.isEmpty) {
+          print('LOGIN ERROR: token tidak ditemukan di response.');
+          return {
+            'success': false,
+            'message':
+                'Login berhasil tapi token tidak ditemukan di response server.'
+          };
+        }
+
+        token = parsedToken;
+
+        // ambil data user
+        final dynamic userJsonDynamic =
+            root['user'] ?? body['user'] ?? root;
+        final Map<String, dynamic> userJson =
+            (userJsonDynamic is Map<String, dynamic>)
+                ? userJsonDynamic
+                : <String, dynamic>{};
+
+        final dynamic idRaw =
+            userJson['client_id'] ?? userJson['id'] ?? root['client_id'] ?? root['id'] ?? 0;
+        final dynamic nameRaw =
+            userJson['name'] ?? root['name'] ?? body['name'] ?? '';
+        final dynamic mailRaw =
+            userJson['email'] ?? root['email'] ?? body['email'] ?? '';
+
+        final bool isSellerFlag =
+            (userJson['isSeller'] ??
+                        root['isSeller'] ??
+                        body['isSeller'] ??
+                        false) ==
+                    true;
 
         currentUser = UserModel(
-          id: int.tryParse(id.toString()) ?? 0,
-          name: name.toString(),
-          email: mail.toString(),
-          isSeller:
-              (data['isSeller'] ?? data['user']?['isSeller'] ?? false) == true,
+          id: int.tryParse(idRaw.toString()) ?? 0,
+          name: nameRaw.toString(),
+          email: mailRaw.toString(),
+          isSeller: isSellerFlag,
         );
 
         final prefs = await SharedPreferences.getInstance();
+
+        // sinkron seller status dengan storage
         final localSellerStatus =
             prefs.getBool('isSeller') ?? currentUser!.isSeller;
         currentUser!.isSeller = localSellerStatus;
 
-        print('User berhasil login: ${currentUser?.name}, ${currentUser?.email}');
-        print('Token JWT: $token');
+        print('User login : ${currentUser?.name} | ${currentUser?.email}');
+        print('Token JWT  : $token');
+        print('isSeller   : ${currentUser?.isSeller}');
 
-        await prefs.setString('auth_token', token ?? '');
+        // simpan ke SharedPreferences
+        await prefs.setString('auth_token', token!);
         await prefs.setString('current_user_name', currentUser?.name ?? '');
         await prefs.setString('current_user_email', currentUser?.email ?? '');
         await prefs.setInt('current_user_id', currentUser?.id ?? 0);
+        await prefs.setBool('isSeller', currentUser!.isSeller);
 
-        return {'success': true, 'data': data};
+        return {'success': true, 'data': body};
       } else {
         return {
           'success': false,
@@ -201,7 +246,6 @@ class AuthService {
 
   /// 🔐 Ambil token dari memori / SharedPreferences
   static Future<String?> getToken() async {
-    // kalau sudah ada di memori, langsung pakai
     if (token != null && token!.isNotEmpty) {
       return token;
     }
@@ -221,15 +265,36 @@ class AuthService {
     }
   }
 
-  /// Utility: set seller status in memory + persist
+  /// ✅ Set seller status (dipanggil setelah daftar penjual)
   static Future<void> setSellerStatus(bool status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isSeller', status);
+
     if (currentUser != null) {
       currentUser!.isSeller = status;
+    }
+
+    print('AuthService.setSellerStatus: $status');
+  }
+
+  /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Toko saya")
+  static Future<bool> getSellerStatus() async {
+    if (currentUser?.isSeller == true) {
+      return true;
+    }
+
+    try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isSeller', status);
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isSeller', status);
+      final stored = prefs.getBool('isSeller') ?? false;
+
+      if (currentUser != null) {
+        currentUser!.isSeller = stored;
+      }
+
+      return stored;
+    } catch (e) {
+      print('AuthService.getSellerStatus error: $e');
+      return false;
     }
   }
 

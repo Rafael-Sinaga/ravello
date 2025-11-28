@@ -21,11 +21,12 @@ class _LoginPageState extends State<LoginPage> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
+    // ✅ SEKARANG LANGSUNG PAKAI BACKEND (TIDAK ADA DEV MODE LAGI)
     final result = await AuthService.login(email, password);
 
     setState(() => isLoading = false);
 
-    if (result['success']) {
+    if (result['success'] == true) {
       print('Login berhasil! User saat ini: ${AuthService.currentUser?.name}');
       print('Response data: ${result['data']}');
 
@@ -117,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 12),
 
-              // TOMBOL LUPA SANDI — SUDAH DIPERBAIKI
+              // TOMBOL LUPA SANDI
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -125,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ForgotPasswordPage(), // <-- PERBAIKAN HANYA DI SINI
+                        builder: (context) => ForgotPasswordPage(),
                       ),
                     );
                   },
