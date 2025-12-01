@@ -26,26 +26,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
     'BRI',
   ];
 
-  // >>> TAMBAHKAN INI <<<
+  // ikon untuk setiap metode pembayaran (urutannya sama dengan "methods")
   static const List<String> paymentIcons = [
-    'assets/images/Paylater.png',   // PayLater
-    'assets/images/Dana.png',       // DANA
-    'assets/images/COD.png',        // COD
-    'assets/images/OVO.png',        // OVO
-    'assets/images/bank.png',       // Transfer Bank
+    'assets/images/Paylater.png', // PayLater
+    'assets/images/Dana.png',     // DANA
+    'assets/images/COD.png',      // COD
+    'assets/images/OVO.png',      // OVO
+    'assets/images/bank.png',     // Transfer Bank
   ];
 
+  // ikon untuk setiap bank (urutannya sama dengan "bankNames")
   static const List<String> bankIcons = [
-    'assets/images/BCA.png',       // BCA
-    'assets/images/Mandiri.png',   // Mandiri
-    'assets/images/BNI.png',       // BNI
-    'assets/images/BRI.png',       // BRI
+    'assets/images/BCA.png',     // BCA
+    'assets/images/Mandiri.png', // Mandiri
+    'assets/images/BNI.png',     // BNI
+    'assets/images/BRI.png',     // BRI
   ];
-  // >>> SAMPAI SINI <<<
 
   int _selectedShipping = 0;
   int _selectedPayment = 0;
-  int? _selectedBank; // NEW: index bank yang dipilih (kalau transfer bank)
+  int? _selectedBank; // index bank yang dipilih (kalau transfer bank)
 
   double _sliderValue = 0.0;
   bool _isSliding = false;
@@ -480,34 +480,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ================== WIDGET: PEMBAYARAN ==================
   Widget _buildPaymentCard() {
-<<<<<<< HEAD
+    // urutan label harus sama dengan paymentIcons
     final methods = [
       'PayLater',
       'DANA',
       'Bayar di Tempat (COD)',
       'OVO',
-      'Transfer Bank (ATM / m-Banking)', // NEW
-=======
-    final paymentMethods = [
-      {
-        'label': 'PayLater',
-        'asset': 'assets/images/Paylater.png',
-      },
-      {
-        'label': 'DANA',
-        'asset': 'assets/images/Dana.png',
-      },
-      {
-        'label': 'Bayar di Tempat (COD)',
-        'asset': 'assets/images/COD.png',
-      },
-      {
-        'label': 'OVO',
-        'asset': 'assets/images/OVO.png',
-      },
->>>>>>> ea5c0b0c5acc1bd761db257aa51635856cf8b857
+      'Transfer Bank (ATM / m-Banking)', // indeks terakhir = transfer bank
     ];
-    final int transferBankIndex = methods.length - 1; // NEW
+    final int transferBankIndex = methods.length - 1;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -524,7 +505,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const SizedBox(height: 8),
-          for (int i = 0; i < paymentMethods.length; i++)
+
+          // LIST METODE PEMBAYARAN
+          for (int i = 0; i < methods.length; i++)
             Column(
               children: [
                 RadioListTile<int>(
@@ -535,35 +518,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   activeColor: primaryColor,
                   title: Row(
                     children: [
-<<<<<<< HEAD
                       if (i < paymentIcons.length)
                         Image.asset(
                           paymentIcons[i],
                           width: 24,
                           height: 24,
                         ),
-                      if (i < paymentIcons.length) const SizedBox(width: 8),
+                      if (i < paymentIcons.length)
+                        const SizedBox(width: 8),
                       Text(
                         methods[i],
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF243036),
-=======
-                      Image.asset(
-                        paymentMethods[i]['asset'] as String,
-                        width: 26,
-                        height: 26,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          paymentMethods[i]['label'] as String,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF243036),
-                          ),
->>>>>>> ea5c0b0c5acc1bd761db257aa51635856cf8b857
                         ),
                       ),
                     ],
@@ -571,7 +538,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   onChanged: (val) {
                     setState(() {
                       _selectedPayment = val ?? 0;
-                      // NEW: kalau user pilih transfer bank dan belum pilih bank, default ke index 0 (BCA)
+
+                      // kalau pilih transfer bank dan belum ada bank terpilih, default ke BCA (index 0)
                       if (_selectedPayment == transferBankIndex &&
                           _selectedBank == null) {
                         _selectedBank = 0;
@@ -579,7 +547,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     });
                   },
                 ),
-                if (i != paymentMethods.length - 1)
+                if (i != methods.length - 1)
                   const Divider(
                     height: 8,
                     color: Color(0xFFE3ECF4),
@@ -587,37 +555,36 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ],
             ),
 
-          // NEW: jika metode pembayaran = Transfer Bank, tampilkan pilihan bank
-          if (_selectedPayment == transferBankIndex) // NEW
-            _buildBankOptions(), // NEW
+          // jika metode pembayaran = Transfer Bank, tampilkan pilihan bank
+          if (_selectedPayment == transferBankIndex) _buildBankOptions(),
         ],
       ),
     );
   }
 
-  // NEW: pilihan bank ketika user pilih "Transfer Bank"
-  Widget _buildBankOptions() { // NEW
-    return Padding( // NEW
-      padding: const EdgeInsets.only(left: 8.0, top: 4.0), // NEW
-      child: Column( // NEW
-        crossAxisAlignment: CrossAxisAlignment.start, // NEW
-        children: [ // NEW
-          const Text( // NEW
-            'Pilih Bank', // NEW
-            style: TextStyle( // NEW
-              fontSize: 12, // NEW
-              fontWeight: FontWeight.w600, // NEW
-              color: primaryColor, // NEW
-            ), // NEW
-          ), // NEW
-          const SizedBox(height: 4), // NEW
-          for (int i = 0; i < bankNames.length; i++) // NEW
-            RadioListTile<int>( // NEW
-              dense: true, // NEW
-              contentPadding: const EdgeInsets.only(left: 8.0), // NEW
-              value: i, // NEW
-              groupValue: _selectedBank, // NEW
-              activeColor: primaryColor, // NEW
+  // PILIHAN BANK SAAT TRANSFER BANK
+  Widget _buildBankOptions() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pilih Bank',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          for (int i = 0; i < bankNames.length; i++)
+            RadioListTile<int>(
+              dense: true,
+              contentPadding: const EdgeInsets.only(left: 8.0),
+              value: i,
+              groupValue: _selectedBank,
+              activeColor: primaryColor,
               title: Row(
                 children: [
                   if (i < bankIcons.length)
@@ -636,16 +603,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                 ],
               ),
-              onChanged: (val) { // NEW
-                setState(() { // NEW
-                  _selectedBank = val; // NEW
-                }); // NEW
-              }, // NEW
-            ), // NEW
-        ], // NEW
-      ), // NEW
-    ); // NEW
-  } // NEW
+              onChanged: (val) {
+                setState(() {
+                  _selectedBank = val;
+                });
+              },
+            ),
+        ],
+      ),
+    );
+  }
 
   // ================== WIDGET: RINGKASAN ==================
   Widget _buildOrderSummaryCard(CartProvider cart) {
