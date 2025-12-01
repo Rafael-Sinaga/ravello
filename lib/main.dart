@@ -23,6 +23,7 @@ import 'package:ravello/pages/seller_dashboard.dart';
 // === Providers ===
 import 'package:ravello/providers/cart_provider.dart';
 import 'package:ravello/providers/order_provider.dart';
+import 'package:ravello/providers/address_provider.dart'; // <--- TAMBAHAN
 
 void main() {
   runApp(
@@ -30,6 +31,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => AddressProvider()), // <--- TAMBAHAN
       ],
       child: const RavelloApp(),
     ),
