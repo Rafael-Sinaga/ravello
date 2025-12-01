@@ -45,6 +45,11 @@ flutter:
     - assets/images/Paylater.png
     - assets/images/OVO.png
     - assets/images/COD.png
+    - assets/images/bank.png
+    - assets/images/BCA.png
+    - assets/images/Mandiri.png
+    - assets/images/BNI.png
+    - assets/images/BRI.png
 
   fonts:
     - family: Poppins

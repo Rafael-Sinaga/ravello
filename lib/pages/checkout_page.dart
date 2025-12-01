@@ -1,7 +1,6 @@
 // lib/pages/checkout_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../models/product_model.dart';
@@ -18,8 +17,33 @@ class _CheckoutPageState extends State<CheckoutPage> {
   static const Color primaryColor = Color(0xFF124170);
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
+  static const List<String> bankNames = [
+    'BCA',
+    'Bank Mandiri',
+    'BNI',
+    'BRI',
+  ];
+
+  // >>> TAMBAHKAN INI <<<
+  static const List<String> paymentIcons = [
+    'assets/images/Paylater.png',   // PayLater
+    'assets/images/Dana.png',       // DANA
+    'assets/images/COD.png',        // COD
+    'assets/images/OVO.png',        // OVO
+    'assets/images/bank.png',       // Transfer Bank
+  ];
+
+  static const List<String> bankIcons = [
+    'assets/images/BCA.png',       // BCA
+    'assets/images/Mandiri.png',   // Mandiri
+    'assets/images/BNI.png',       // BNI
+    'assets/images/BRI.png',       // BRI
+  ];
+  // >>> SAMPAI SINI <<<
+
   int _selectedShipping = 0;
   int _selectedPayment = 0;
+  int? _selectedBank; // NEW: index bank yang dipilih (kalau transfer bank)
 
   double _sliderValue = 0.0;
   bool _isSliding = false;
@@ -427,7 +451,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
       'DANA',
       'Bayar di Tempat (COD)',
       'OVO',
+      'Transfer Bank (ATM / m-Banking)', // NEW
     ];
+    final int transferBankIndex = methods.length - 1; // NEW
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -453,16 +479,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   value: i,
                   groupValue: _selectedPayment,
                   activeColor: primaryColor,
-                  title: Text(
-                    methods[i],
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF243036),
-                    ),
+                  title: Row(
+                    children: [
+                      if (i < paymentIcons.length)
+                        Image.asset(
+                          paymentIcons[i],
+                          width: 24,
+                          height: 24,
+                        ),
+                      if (i < paymentIcons.length) const SizedBox(width: 8),
+                      Text(
+                        methods[i],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF243036),
+                        ),
+                      ),
+                    ],
                   ),
                   onChanged: (val) {
                     setState(() {
                       _selectedPayment = val ?? 0;
+                      // NEW: kalau user pilih transfer bank dan belum pilih bank, default ke index 0 (BCA)
+                      if (_selectedPayment == transferBankIndex &&
+                          _selectedBank == null) {
+                        _selectedBank = 0;
+                      }
                     });
                   },
                 ),
@@ -473,10 +515,66 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
               ],
             ),
+
+          // NEW: jika metode pembayaran = Transfer Bank, tampilkan pilihan bank
+          if (_selectedPayment == transferBankIndex) // NEW
+            _buildBankOptions(), // NEW
         ],
       ),
     );
   }
+
+  // NEW: pilihan bank ketika user pilih "Transfer Bank"
+  Widget _buildBankOptions() { // NEW
+    return Padding( // NEW
+      padding: const EdgeInsets.only(left: 8.0, top: 4.0), // NEW
+      child: Column( // NEW
+        crossAxisAlignment: CrossAxisAlignment.start, // NEW
+        children: [ // NEW
+          const Text( // NEW
+            'Pilih Bank', // NEW
+            style: TextStyle( // NEW
+              fontSize: 12, // NEW
+              fontWeight: FontWeight.w600, // NEW
+              color: primaryColor, // NEW
+            ), // NEW
+          ), // NEW
+          const SizedBox(height: 4), // NEW
+          for (int i = 0; i < bankNames.length; i++) // NEW
+            RadioListTile<int>( // NEW
+              dense: true, // NEW
+              contentPadding: const EdgeInsets.only(left: 8.0), // NEW
+              value: i, // NEW
+              groupValue: _selectedBank, // NEW
+              activeColor: primaryColor, // NEW
+              title: Row(
+                children: [
+                  if (i < bankIcons.length)
+                    Image.asset(
+                      bankIcons[i],
+                      width: 24,
+                      height: 24,
+                    ),
+                  if (i < bankIcons.length) const SizedBox(width: 8),
+                  Text(
+                    bankNames[i],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF243036),
+                    ),
+                  ),
+                ],
+              ),
+              onChanged: (val) { // NEW
+                setState(() { // NEW
+                  _selectedBank = val; // NEW
+                }); // NEW
+              }, // NEW
+            ), // NEW
+        ], // NEW
+      ), // NEW
+    ); // NEW
+  } // NEW
 
   // ================== WIDGET: RINGKASAN ==================
   Widget _buildOrderSummaryCard(Product product) {
