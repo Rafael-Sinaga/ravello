@@ -180,13 +180,18 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadLocalNameAndPhone();
   }
 
+  // 🔥 sekarang cuma ambil dari AuthService (yang sudah ikut DB)
   Future<void> _loadSellerStatus() async {
-    // gunakan AuthService supaya sinkron dengan SharedPreferences
-    final status = await AuthService.getSellerStatus();
-    if (!mounted) return;
-    setState(() {
-      _isSeller = status;
-    });
+    try {
+      final statusFromService = await AuthService.getSellerStatus();
+
+      if (!mounted) return;
+      setState(() {
+        _isSeller = statusFromService;
+      });
+    } catch (e) {
+      print('Gagal load seller status: $e');
+    }
   }
 
   Future<void> _refreshSellerStatus() async {
@@ -326,9 +331,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         await prefs.setString('current_user_name', newName);
                         await prefs.setString('user_phone', newPhone);
                         await prefs.setString('user_description', newDesc);
-
-                        // ❌ TIDAK LAGI edit AuthService.currentUser!.name
-                        // cukup pakai override + prefs
 
                         if (!mounted) return;
                         setState(() {
@@ -523,7 +525,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const SellerDashboardPage()),
+                          builder: (context) => const SellerDashboardPage(),
+                        ),
                       ).then((_) {
                         _refreshSellerStatus();
                       });
@@ -532,7 +535,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const VerifySellerPage()),
+                          builder: (context) => const VerifySellerPage(),
+                        ),
                       ).then((_) {
                         _refreshSellerStatus();
                       });
@@ -540,7 +544,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                   icon: const Icon(Icons.storefront_rounded, size: 20),
                   label: Text(
-                    _isSeller ? 'Toko Saya' : 'Daftar sebagai Penjual',
+                    _isSeller ? 'Lihat Toko' : 'Daftar sebagai Penjual',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -583,7 +587,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const OrderPage()),
+                            builder: (_) => const OrderPage(),
+                          ),
                         );
                       },
                     ),
@@ -687,8 +692,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
-                              builder: (context) =>
-                                  const OnboardingPage()),
+                            builder: (context) => const OnboardingPage(),
+                          ),
                           (route) => false,
                         );
                       }

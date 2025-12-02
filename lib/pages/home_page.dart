@@ -1,3 +1,4 @@
+// lib/pages/home_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -424,7 +425,7 @@ class _HomePageState extends State<HomePage> {
                         final product = _products[index];
                         final hasDiscount =
                             product.discount != null && product.discount! > 0;
-                        final double discountedPrice = hasDiscount
+                        final num discountedPrice = hasDiscount
                             ? product.price -
                                 (product.price * (product.discount! / 100))
                             : product.price;
@@ -460,13 +461,30 @@ class _HomePageState extends State<HomePage> {
                                     borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(12),
                                     ),
-                                    child: Image.asset(
-                                      product.imagePath,
-                                      height: 90,
-                                      width: double.infinity,
-                                      fit: BoxFit.contain,
-                                      filterQuality: FilterQuality.medium,
-                                    ),
+                                    child: product.imagePath
+                                            .toString()
+                                            .startsWith('http')
+                                        ? Image.network(
+                                            product.imagePath,
+                                            height: 90,
+                                            width: double.infinity,
+                                            fit: BoxFit.contain,
+                                            filterQuality:
+                                                FilterQuality.medium,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                              Icons.broken_image,
+                                              size: 40,
+                                            ),
+                                          )
+                                        : Image.asset(
+                                            product.imagePath,
+                                            height: 90,
+                                            width: double.infinity,
+                                            fit: BoxFit.contain,
+                                            filterQuality:
+                                                FilterQuality.medium,
+                                          ),
                                   ),
                                 ),
                                 Expanded(

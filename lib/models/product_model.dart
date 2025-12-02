@@ -1,85 +1,114 @@
 // lib/models/product_model.dart
 
-/// Helper kecil untuk parse integer yang bisa datang sebagai int / double / String
-int? _parseInt(dynamic value) {
-  if (value == null) return null;
-  if (value is int) return value;
-  if (value is double) return value.toInt();
-  return int.tryParse(value.toString());
-}
-
+/// Model produk yang kompatibel dengan:
+/// - kode UI lama (name, price, imagePath, discount)
+/// - data dari backend (product_id, product_name, image_url, dll)
 class Product {
-  final int? id;
+  /// ID produk dari backend (bisa null kalau produk lokal/dummy)
+  final int? productId;
+
+  /// Nama produk — dipakai di semua UI
   final String name;
-  final double price;
-  final String imagePath;       // dipakai untuk HomePage & DetailProduct
+
+  /// Deskripsi produk (opsional)
   final String description;
+
+  /// Harga produk
+  final num price;
+
+  /// Stok produk (default 0 kalau nggak diisi)
+  final int stock;
+
+  /// Persentase diskon (0–100), nullable
   final double? discount;
-  final int? stock;
+
+  /// ID kategori dari backend (opsional)
   final int? categoryId;
 
+  /// Path gambar yang dipakai UI:
+  /// - bisa path asset lokal: 'assets/images/sepatu.png'
+  /// - bisa URL penuh dari backend: 'http://.../uploads/xxx.png'
+  final String imagePath;
+
+  /// Nama toko (kalau datang dari backend)
+  final String? storeName;
+
+  /// ID toko (kalau datang dari backend)
+  final int? storeId;
+
+  /// Convenience getter, kalau lu mau nama yang lebih “web-ish”
+  String get imageUrl => imagePath;
+
   Product({
-    this.id,
+    this.productId,
     required this.name,
+    this.description = '',
     required this.price,
-    required this.imagePath,
-    required this.description,
+    this.stock = 0,
     this.discount,
-    this.stock,
     this.categoryId,
+    required this.imagePath,
+    this.storeName,
+    this.storeId,
   });
 
-  /// Factory dari JSON API
+  /// Factory untuk parse dari JSON backend
+  ///
+  /// Backend kirim field:
+  /// - product_id
+  /// - product_name
+  /// - description
+  /// - price
+  /// - stock
+  /// - discount (opsional)
+  /// - category_id
+  /// - image_url  (URL penuh atau path relatif)
+  /// - store_name
+  /// - store_id
   factory Product.fromJson(Map<String, dynamic> json) {
-    // price bisa int / double / string
-    final rawPrice = json['price'];
-    double price;
-    if (rawPrice is int) {
-      price = rawPrice.toDouble();
-    } else if (rawPrice is double) {
-      price = rawPrice;
-    } else {
-      price = double.tryParse(rawPrice.toString()) ?? 0;
+    int? _asInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString());
     }
 
-    // discount optional
-    final rawDiscount = json['discount'];
-    double? discount;
-    if (rawDiscount != null) {
-      if (rawDiscount is int) {
-        discount = rawDiscount.toDouble();
-      } else if (rawDiscount is double) {
-        discount = rawDiscount;
-      } else {
-        discount = double.tryParse(rawDiscount.toString());
-      }
+    double? _asDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is double) return v;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString());
     }
 
-    int? stock;
-    final rawStock = json['stock'];
-    if (rawStock is int) {
-      stock = rawStock;
-    } else if (rawStock != null) {
-      stock = int.tryParse(rawStock.toString());
-    }
+    final rawImage =
+        (json['image_url'] ?? json['imagePath'] ?? json['image'] ?? '').toString();
 
     return Product(
-      // ✅ pakai _parseInt supaya aman kalau backend ngirim "10" (String)
-      id: _parseInt(json['product_id'] ?? json['id']),
-      name: json['product_name'] ?? json['name'] ?? '',
-      price: price,
-      // sementara kalau backend belum kirim image_url,
-      // pakai placeholder asset
-      imagePath: json['image_url'] ?? 'assets/images/sepatu.png',
-      description: json['description'] ?? '',
-      discount: discount,
-      stock: stock,
-      categoryId: _parseInt(json['category_id']),
+      productId: _asInt(json['product_id']),
+      name: (json['product_name'] ?? json['name'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      price: (json['price'] as num?) ?? 0,
+      stock: _asInt(json['stock']) ?? 0,
+      discount: _asDouble(json['discount']),
+      categoryId: _asInt(json['category_id']),
+      imagePath: rawImage,
+      storeName: json['store_name']?.toString(),
+      storeId: _asInt(json['store_id']),
     );
   }
-}
 
-/// Dulu list dummy dipakai HomePage.
-/// Sekarang HomePage pakai data dari backend, jadi ini boleh dikosongkan
-/// (biarin aja tetap ada supaya file lain yang masih import nggak error).
-final List<Product> products = [];
+  Map<String, dynamic> toJson() {
+    return {
+      'product_id': productId,
+      'product_name': name,
+      'description': description,
+      'price': price,
+      'stock': stock,
+      'discount': discount,
+      'category_id': categoryId,
+      'image_url': imagePath,
+      'store_name': storeName,
+      'store_id': storeId,
+    };
+  }
+}

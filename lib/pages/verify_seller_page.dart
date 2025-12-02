@@ -195,7 +195,7 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         await prefs.setInt('storeId', storeId);
       }
 
-      await prefs.setBool('isSeller', true);
+      // 👉 anggap di titik ini backend sudah promote user jadi seller
       await AuthService.setSellerStatus(true);
 
       if (!mounted) return;
