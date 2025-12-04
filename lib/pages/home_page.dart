@@ -12,6 +12,7 @@ import '../pages/notification_page.dart';
 import '../services/auth_service.dart';
 import '../pages/settings_page.dart';
 import '../services/product_service.dart';
+import 'search_result_page.dart'; // <-- TAMBAHAN: halaman hasil search
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,6 +31,9 @@ class _HomePageState extends State<HomePage> {
   List<Product> _products = [];
   bool _isLoadingProducts = true;
   String? _productError;
+
+  // ===== controller search =====
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -73,10 +77,38 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openSearch(String rawQuery) {
+    final query = rawQuery.trim();
+    if (query.isEmpty) return;
+
+    if (_isLoadingProducts || _products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produk belum siap dicari. Coba lagi setelah produk selesai dimuat.',
+            style: TextStyle(fontFamily: 'Poppins'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchResultPage(
+          query: query,
+          allProducts: _products,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _promoTimer?.cancel();
     _promoController.dispose();
+    _searchController.dispose(); // <-- dispose controller search
     super.dispose();
   }
 
@@ -92,7 +124,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF3F5FB),
       bottomNavigationBar: const Navbar(currentIndex: 0),
       body: SafeArea(
         child: RefreshIndicator(
@@ -105,123 +137,151 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // HEADER
-                  Row(
-                    children: [
-                      ClipOval(
-                        child: Image.asset(
-                          'assets/images/Profile.png',
-                          width: 45,
-                          height: 45,
-                          fit: BoxFit.cover,
-                        ),
+                  // HEADER DALAM CARD
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF124170).withOpacity(0.06),
+                          const Color(0xFF4A688A).withOpacity(0.02),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipOval(
+                          child: Image.asset(
+                            'assets/images/Profile.png',
+                            width: 45,
+                            height: 45,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Halo, ${user?.name ?? "Pengguna"}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF102A43),
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Selamat datang kembali 👋',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF7B8794),
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Stack(
                           children: [
-                            Text(
-                              'Halo, ${user?.name ?? "Pengguna"}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                                fontFamily: 'Poppins',
+                            IconButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NotificationPage(
+                                      orders: orderProvider.orders,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.notifications_none,
+                                color: Color(0xFF124170),
                               ),
                             ),
-                            const Text(
-                              'Selamat datang',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Stack(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => NotificationPage(
-                                    orders: orderProvider.orders,
+                            if (hasPendingOrders)
+                              Positioned(
+                                right: 10,
+                                top: 10,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEC4A3F),
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.notifications_none,
-                              color: Color(0xFF124170),
-                            ),
-                          ),
-                          if (hasPendingOrders)
-                            Positioned(
-                              right: 10,
-                              top: 10,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF124170),
-                                  shape: BoxShape.circle,
-                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsPage(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.settings_outlined,
-                          color: Color(0xFF124170),
+                          ],
                         ),
-                      ),
-                    ],
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.settings_outlined,
+                            color: Color(0xFF124170),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
 
-                  // SEARCH BAR
+                  // SEARCH BAR (PILL)
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(999),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: const TextField(
+                    child: TextField(
+                      controller: _searchController,
+                      onSubmitted: _openSearch,
                       decoration: InputDecoration(
                         hintText: 'Cari barang yang anda inginkan',
-                        hintStyle: TextStyle(
-                          color: Colors.grey,
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF9AA5B1),
                           fontSize: 14,
                           fontFamily: 'Poppins',
                         ),
                         border: InputBorder.none,
-                        icon: Icon(Icons.search, color: Color(0xFF124170)),
+                        icon: const Icon(Icons.search, color: Color(0xFF124170)),
+                        suffixIcon: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: Color(0xFF124170),
+                          ),
+                          onPressed: () {
+                            _openSearch(_searchController.text);
+                          },
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // KATEGORI
                   Row(
@@ -242,7 +302,7 @@ class _HomePageState extends State<HomePage> {
                           'Lihat semua',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: Color(0xFF7B8794),
                             fontFamily: 'Poppins',
                           ),
                         ),
@@ -279,7 +339,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 26),
 
                   // PROMO CAROUSEL
                   SizedBox(
@@ -352,7 +412,7 @@ class _HomePageState extends State<HomePage> {
                           'Lihat semua',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: Color(0xFF7B8794),
                             fontFamily: 'Poppins',
                           ),
                         ),
@@ -443,12 +503,12 @@ class _HomePageState extends State<HomePage> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withOpacity(0.15),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
@@ -459,7 +519,7 @@ class _HomePageState extends State<HomePage> {
                                   tag: product.imagePath,
                                   child: ClipRRect(
                                     borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12),
+                                      top: Radius.circular(14),
                                     ),
                                     child: product.imagePath
                                             .toString()
@@ -583,7 +643,7 @@ class _HomePageState extends State<HomePage> {
                                                   color: Color(0xFF124170)),
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
-                                                    BorderRadius.circular(8),
+                                                    BorderRadius.circular(10),
                                               ),
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -649,21 +709,26 @@ class _HomePageState extends State<HomePage> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF124170) : Colors.white,
+                color:
+                    isSelected ? const Color(0xFF124170) : Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF124170)
+                        : Colors.grey.shade300,
+                    width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : const Color(0xFF124170),
-                size: 28,
+                size: 26,
               ),
             ),
             const SizedBox(height: 8),
@@ -696,19 +761,19 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF3A6188).withOpacity(0.25),
-              const Color(0xFF6F7A74).withOpacity(0.25),
+              const Color(0xFF124170),
+              const Color(0xFF4F709C),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
             ClipRRect(
               borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(12)),
+                  const BorderRadius.horizontal(left: Radius.circular(16)),
               child: Image.asset(
                 imagePath,
                 width: 110,
@@ -728,7 +793,7 @@ class _HomePageState extends State<HomePage> {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF124170),
+                        color: Colors.white,
                         fontFamily: 'Poppins',
                       ),
                     ),
@@ -737,7 +802,7 @@ class _HomePageState extends State<HomePage> {
                       subtitle,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
+                        color: Color(0xFFE5E7EB),
                         fontFamily: 'Poppins',
                       ),
                     ),

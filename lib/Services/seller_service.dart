@@ -32,7 +32,8 @@ class SellerService {
 
       print('REGISTER STORE URL   : $url');
       print('REGISTER STORE TOKEN : $token');
-      print('REGISTER STORE BODY  : {store_name: $storeName, description: $description, address: $address}');
+      print(
+          'REGISTER STORE BODY  : {store_name: $storeName, description: $description, address: $address}');
 
       final response = await http
           .post(
@@ -50,16 +51,16 @@ class SellerService {
           .timeout(_timeoutDuration);
 
       print('REGISTER STORE status: ${response.statusCode}');
-      final preview =
-          response.body.length > 200 ? response.body.substring(0, 200) : response.body;
+      final preview = response.body.length > 200
+          ? response.body.substring(0, 200)
+          : response.body;
       print('REGISTER STORE body  : $preview');
 
       // 🔍 Deteksi HTML (endpoint salah / bukan API JSON)
       final contentType = response.headers['content-type'] ?? '';
       final bodyText = response.body.trim();
 
-      final bool looksLikeHtml =
-          bodyText.startsWith('<!DOCTYPE html') ||
+      final bool looksLikeHtml = bodyText.startsWith('<!DOCTYPE html') ||
           bodyText.startsWith('<html') ||
           contentType.contains('text/html');
 

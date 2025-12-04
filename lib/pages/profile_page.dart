@@ -180,17 +180,21 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadLocalNameAndPhone();
   }
 
-  // 🔥 sekarang cuma ambil dari AuthService (yang sudah ikut DB)
+  /// 🔥 SEKARANG MURNI PAKAI FLAG LOKAL
+  /// TIDAK LAGI MENGGUNAKAN AuthService.getSellerStatus()
   Future<void> _loadSellerStatus() async {
     try {
-      final statusFromService = await AuthService.getSellerStatus();
+      final prefs = await SharedPreferences.getInstance();
+      final localFlag = prefs.getBool('isSeller_local') ?? false;
 
       if (!mounted) return;
       setState(() {
-        _isSeller = statusFromService;
+        _isSeller = localFlag;
       });
+
+      print('PROFILE _isSeller (from local isSeller_local) = $_isSeller');
     } catch (e) {
-      print('Gagal load seller status: $e');
+      print('Gagal load seller status dari SharedPreferences: $e');
     }
   }
 

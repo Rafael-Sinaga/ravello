@@ -195,6 +195,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         await prefs.setInt('storeId', storeId);
       }
 
+      // 🔥 BARIS TAMBAHAN: flag lokal bahwa user sudah jadi seller
+      // ini cuma disimpan di device, tidak menyentuh backend,
+      // jadi TIDAK memaksa lu daftar ulang.
+      await prefs.setBool('isSeller_local', true);
+
       // 👉 anggap di titik ini backend sudah promote user jadi seller
       await AuthService.setSellerStatus(true);
 

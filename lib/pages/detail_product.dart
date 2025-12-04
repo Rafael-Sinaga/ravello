@@ -112,11 +112,19 @@ class _DetailProductState extends State<DetailProduct> {
                   tag: widget.product.imagePath,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      widget.product.imagePath,
-                      height: 180,
-                      fit: BoxFit.contain,
-                    ),
+                    child: widget.product.imagePath.startsWith('http')
+                        ? Image.network(
+                            widget.product.imagePath,
+                            height: 180,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.broken_image, size: 80),
+                          )
+                        : Image.asset(
+                            widget.product.imagePath,
+                            height: 180,
+                            fit: BoxFit.contain,
+                          ),
                   ),
                 ),
               ),

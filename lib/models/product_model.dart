@@ -83,15 +83,23 @@ class Product {
     final rawImage =
         (json['image_url'] ?? json['imagePath'] ?? json['image'] ?? '').toString();
 
+    // kalau backend nggak kirim gambar, pakai placeholder biar nggak error asset
+    final resolvedImage = rawImage.isEmpty
+        ? 'https://via.placeholder.com/300x300?text=No+Image'
+        : rawImage;
+
     return Product(
       productId: _asInt(json['product_id']),
       name: (json['product_name'] ?? json['name'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
-      price: (json['price'] as num?) ?? 0,
+
+      // price dikonversi pakai helper, aman kalau "90000" (String)
+      price: _asDouble(json['price']) ?? 0,
+
       stock: _asInt(json['stock']) ?? 0,
       discount: _asDouble(json['discount']),
       categoryId: _asInt(json['category_id']),
-      imagePath: rawImage,
+      imagePath: resolvedImage,
       storeName: json['store_name']?.toString(),
       storeId: _asInt(json['store_id']),
     );

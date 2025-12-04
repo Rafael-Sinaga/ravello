@@ -97,6 +97,16 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     Navigator.of(context).pop();
 
     if (result['success']) {
+      // ✅ SUCCESS: snackBar hijau
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message'] ?? 'Akun berhasil didaftarkan. Silakan login.',
+          ),
+          backgroundColor: const Color(0xFF16A34A), // hijau
+        ),
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -131,7 +141,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    // UI sama persis seperti yang lu punya (tidak diubah)
+    // UI sama persis seperti yang lu punya (layout), hanya styling kotak OTP yg di-improve
     return Scaffold(
       backgroundColor: const Color(0xFFF8FDFA),
       appBar: AppBar(
@@ -172,20 +182,30 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(6, (index) {
+                        final filled =
+                            _otpControllers[index].text.isNotEmpty; // 🔹 STATUS TERISI
+
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 6),
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: filled
+                                ? const Color(0xFFE7F7EE) // hijau tipis kalau terisi
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
-                                  blurRadius: 6)
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 6,
+                              )
                             ],
-                            border:
-                                Border.all(color: const Color(0xFFE6E9EB)),
+                            border: Border.all(
+                              color: filled
+                                  ? const Color(0xFF22A45D)
+                                      .withOpacity(0.7) // border hijau lembut
+                                  : const Color(0xFFE6E9EB),
+                            ),
                           ),
                           child: TextField(
                             controller: _otpControllers[index],
@@ -202,8 +222,13 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero),
                             onChanged: (v) {
+                              // 🔹 trigger rebuild biar warna kotak update
+                              setState(() {});
                               if (v.length == 1 && index < 5) {
                                 _otpFocusNodes[index + 1].requestFocus();
+                              }
+                              if (v.isEmpty && index > 0) {
+                                _otpFocusNodes[index - 1].requestFocus();
                               }
                             },
                           ),

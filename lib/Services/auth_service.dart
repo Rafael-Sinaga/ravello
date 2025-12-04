@@ -63,12 +63,17 @@ class AuthService {
                 : <String, dynamic>{};
 
         final dynamic idRaw =
-            userJson['client_id'] ?? userJson['id'] ?? root['client_id'] ?? root['id'] ?? 0;
+            userJson['client_id'] ??
+            userJson['id'] ??
+            root['client_id'] ??
+            root['id'] ??
+            0;
         final dynamic nameRaw =
             userJson['name'] ?? root['name'] ?? body['name'] ?? '';
         final dynamic mailRaw =
             userJson['email'] ?? root['email'] ?? body['email'] ?? '';
 
+        // 🎯 isSeller murni dari backend
         final bool isSellerFlag =
             (userJson['isSeller'] ??
                         root['isSeller'] ??
@@ -85,16 +90,11 @@ class AuthService {
 
         final prefs = await SharedPreferences.getInstance();
 
-        // sinkron seller status dengan storage
-        final localSellerStatus =
-            prefs.getBool('isSeller') ?? currentUser!.isSeller;
-        currentUser!.isSeller = localSellerStatus;
-
         print('User login : ${currentUser?.name} | ${currentUser?.email}');
         print('Token JWT  : $token');
         print('isSeller   : ${currentUser?.isSeller}');
 
-        // simpan ke SharedPreferences
+        // simpan ke SharedPreferences (mirror dari backend)
         await prefs.setString('auth_token', token!);
         await prefs.setString('current_user_name', currentUser?.name ?? '');
         await prefs.setString('current_user_email', currentUser?.email ?? '');
@@ -265,7 +265,7 @@ class AuthService {
     }
   }
 
-  /// ✅ Set seller status (dipanggil setelah daftar penjual)
+  /// ✅ Set seller status (dipanggil setelah daftar penjual & backend sukses update)
   static Future<void> setSellerStatus(bool status) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isSeller', status);
@@ -277,20 +277,17 @@ class AuthService {
     print('AuthService.setSellerStatus: $status');
   }
 
-  /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Toko saya")
+  /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Lihat toko")
   static Future<bool> getSellerStatus() async {
-    if (currentUser?.isSeller == true) {
-      return true;
+    // 1️⃣ Sumber utama: currentUser (diisi dari backend saat login / update)
+    if (currentUser != null) {
+      return currentUser!.isSeller;
     }
 
+    // 2️⃣ Fallback: nilai terakhir yang pernah disimpan (mis. sebelum currentUser terisi)
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getBool('isSeller') ?? false;
-
-      if (currentUser != null) {
-        currentUser!.isSeller = stored;
-      }
-
       return stored;
     } catch (e) {
       print('AuthService.getSellerStatus error: $e');

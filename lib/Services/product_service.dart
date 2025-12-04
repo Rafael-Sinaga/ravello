@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/api_config.dart';
 import 'auth_service.dart';
@@ -16,7 +17,7 @@ class ProductService {
   /// Membuat produk baru untuk toko milik client yang sedang login
   ///
   /// [imageFile] boleh null:
-  /// - kalau null  -> kirim JSON biasa (logika lama, TANPA gambar)
+  /// - kalau null  -> kirim JSON biasa (tanpa gambar)
   /// - kalau tidak -> kirim multipart + field "image"
   static Future<Map<String, dynamic>> createProduct({
     required String name,
@@ -35,6 +36,11 @@ class ProductService {
         };
       }
 
+      // 🔹 Ambil storeId yang disimpan saat daftar toko
+      final prefs = await SharedPreferences.getInstance();
+      final storeId = prefs.getInt('storeId');
+      print('CREATE PRODUCT storeId dari prefs: $storeId');
+
       // ❗ SESUAIKAN dengan mount router di backend:
       // misal: app.use('/product', productRouter(con));
       final url = Uri.parse('${ApiConfig.baseUrl}/product');
@@ -47,6 +53,7 @@ class ProductService {
           'price: $price, '
           'stock: $stock, '
           'category_id: $categoryId, '
+          'store_id: $storeId, '
           'hasImage: ${imageFile != null}'
           '}');
 
@@ -56,6 +63,18 @@ class ProductService {
       // 1) TANPA GAMBAR → JSON BIASA
       // ============================
       if (imageFile == null) {
+        final payload = <String, dynamic>{
+          'product_name': name,
+          'description': description,
+          'price': price,
+          'stock': stock,
+          'category_id': categoryId,
+        };
+
+        if (storeId != null) {
+          payload['store_id'] = storeId;
+        }
+
         response = await http
             .post(
               url,
@@ -63,14 +82,7 @@ class ProductService {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer $token',
               },
-              body: jsonEncode({
-                // ⚠️ WAJIB sama persis dengan backend
-                'product_name': name,
-                'description': description,
-                'price': price,
-                'stock': stock,
-                'category_id': categoryId,
-              }),
+              body: jsonEncode(payload),
             )
             .timeout(_timeoutDuration);
       } else {
@@ -85,14 +97,16 @@ class ProductService {
         request.fields['price'] = price.toString();
         request.fields['stock'] = stock.toString();
         request.fields['category_id'] = categoryId.toString();
+        if (storeId != null) {
+          request.fields['store_id'] = storeId.toString();
+        }
 
-        // Baca bytes dari XFile (bisa di web & mobile)
         final bytes = await imageFile.readAsBytes();
-        final fileName = imageFile.name; // nama file asli
+        final fileName = imageFile.name;
 
         request.files.add(
           http.MultipartFile.fromBytes(
-            'image', // ⚠️ harus sama dengan upload.single('image')
+            'image', // ⚠️ nama field harus sama dengan upload.single('image')
             bytes,
             filename: fileName,
           ),
@@ -109,7 +123,7 @@ class ProductService {
           : response.body;
       print('CREATE PRODUCT body  : $preview');
 
-      // Deteksi kalau server balikin HTML (endpoint salah)
+      // 🔍 Deteksi kalau server balikin HTML (endpoint salah)
       final contentType = response.headers['content-type'] ?? '';
       final bodyText = response.body.trim();
       final bool looksLikeHtml = bodyText.startsWith('<!DOCTYPE html') ||
@@ -125,28 +139,88 @@ class ProductService {
         };
       }
 
-      final body = jsonDecode(response.body);
-
-      // Backend lu kirim: { success: true, message, product_id, store_id }
-      final bool ok = body['success'] == true ||
-          response.statusCode == 200 ||
-          response.statusCode == 201;
-
-      if (ok) {
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (e) {
+        print('CREATE PRODUCT JSON DECODE ERROR: $e');
         return {
-          'success': true,
-          'message': body['message'] ?? 'Produk berhasil ditambahkan.',
-          'product_id': body['product_id'],
-          'store_id': body['store_id'],
-          'raw': body,
+          'success': false,
+          'message':
+              'Gagal membaca respons server saat menambahkan produk (bukan JSON valid).',
+          'raw_body': response.body,
         };
       }
 
+      // ========= LOGIKA SUKSES (lebih longgar) =========
+      bool successFlag = false;
+      int? productId;
+      int? storeIdFromResponse;
+
+      if (decoded is Map<String, dynamic>) {
+        // 1) Kalau backend punya field "success", itu yang paling dipercaya
+        if (decoded.containsKey('success')) {
+          successFlag = decoded['success'] == true;
+        } else if (decoded.containsKey('product') ||
+            decoded.containsKey('product_id')) {
+          // 2) fallback: ada objek produk / product_id
+          successFlag = true;
+        } else if (response.statusCode == 200 ||
+            response.statusCode == 201) {
+          // 3) fallback terakhir: status HTTP sukses
+          successFlag = true;
+        }
+
+        // ambil product_id / store_id kalau ada
+        final productObj = decoded['product'];
+        if (productObj is Map<String, dynamic>) {
+          if (productObj['id'] is int) {
+            productId = productObj['id'] as int;
+          } else if (productObj['product_id'] is int) {
+            productId = productObj['product_id'] as int;
+          }
+          if (productObj['store_id'] is int) {
+            storeIdFromResponse = productObj['store_id'] as int;
+          }
+        }
+
+        if (decoded['product_id'] is int) {
+          productId = decoded['product_id'] as int;
+        }
+        if (decoded['store_id'] is int) {
+          storeIdFromResponse = decoded['store_id'] as int;
+        }
+      }
+
+      // ❌ Kalau server TIDAK JELAS bilang "success", anggap GAGAL
+      if (!successFlag) {
+        final msg = (decoded is Map<String, dynamic>)
+            ? (decoded['message'] ??
+                'Server tidak mengkonfirmasi bahwa produk tersimpan.')
+            : 'Server tidak mengkonfirmasi bahwa produk tersimpan.';
+        return {
+          'success': false,
+          'message': '$msg (HTTP ${response.statusCode})',
+          'raw': decoded,
+        };
+      }
+
+      // ⚠️ Kalau suksesFlag true tapi TIDAK ADA product_id → jangan error ke user,
+      // cukup log warning biar lu bisa cek di debug.
+      if (productId == null) {
+        print(
+            'WARNING: Server mengembalikan sukses tapi tanpa product_id. Response: $decoded');
+      }
+
+      // ✅ Di titik ini kita anggap BERHASIL
       return {
-        'success': false,
-        'message':
-            body['message'] ?? 'Gagal menambahkan produk. (${response.statusCode})',
-        'raw': body,
+        'success': true,
+        'message': (decoded is Map<String, dynamic>)
+            ? (decoded['message'] ?? 'Produk berhasil ditambahkan.')
+            : 'Produk berhasil ditambahkan.',
+        'product_id': productId,
+        'store_id': storeIdFromResponse ?? storeId,
+        'raw': decoded,
       };
     } on TimeoutException catch (e) {
       print('CREATE PRODUCT TIMEOUT: $e');
@@ -166,7 +240,6 @@ class ProductService {
   /// Ambil semua produk untuk ditampilkan di beranda
   static Future<List<Product>> fetchProducts() async {
     try {
-      // kalau endpoint publik tanpa auth:
       final url = Uri.parse('${ApiConfig.baseUrl}/product');
       final response = await http.get(url).timeout(_timeoutDuration);
 
@@ -180,9 +253,14 @@ class ProductService {
         throw Exception('Gagal memuat produk. Status: ${response.statusCode}');
       }
 
-      final decoded = jsonDecode(response.body);
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (e) {
+        print('FETCH PRODUCTS JSON DECODE ERROR: $e');
+        throw Exception('Respons produk bukan JSON valid.');
+      }
 
-      // Bisa berupa: List, atau { data: [...] }, atau { products: [...] }
       List<dynamic> rawList;
       if (decoded is List) {
         rawList = decoded;
@@ -198,7 +276,6 @@ class ProductService {
         rawList = [];
       }
 
-      // Map ke model Product (pastikan Product.fromJson ada)
       final products = rawList
           .whereType<Map<String, dynamic>>()
           .map((json) => Product.fromJson(json))
