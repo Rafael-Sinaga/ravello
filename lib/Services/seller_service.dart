@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart'; // <-- TAMBAHAN
 
 import '../utils/api_config.dart';
 import 'auth_service.dart';
@@ -83,6 +84,15 @@ class SellerService {
           response.statusCode == 201;
 
       if (ok) {
+        // ⬇️ SET STATUS PENJUAL SECARA LOKAL
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isSeller_local', true);
+          print('REGISTER STORE: isSeller_local diset ke TRUE (sukses daftar).');
+        } catch (e) {
+          print('REGISTER STORE: gagal menyimpan isSeller_local => $e');
+        }
+
         return {
           'success': true,
           'message': body['message'] ?? 'Toko berhasil didaftarkan.',
@@ -92,12 +102,34 @@ class SellerService {
         };
       }
 
-      // Kalau gagal (misal 403 / 500)
+      // ❌ Kalau gagal (misal 403 / 500)
+      final String message = body['message'] ??
+          'Gagal mendaftar sebagai penjual. (${response.statusCode})';
+
+      bool alreadyHasStore = false;
+
+      // 🎯 DETEKSI KASUS: user sebenarnya SUDAH punya toko
+      final lowerMsg = message.toLowerCase();
+      if (lowerMsg.contains('hanya diperbolehkan mendaftar satu toko') ||
+          lowerMsg.contains('hanya diperbolehkan satu toko') ||
+          lowerMsg.contains('sudah memiliki toko')) {
+        alreadyHasStore = true;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isSeller_local', true);
+          print(
+              'REGISTER STORE: pesan backend menandakan user sudah punya toko. isSeller_local = TRUE');
+        } catch (e) {
+          print(
+              'REGISTER STORE: gagal menyimpan isSeller_local (already has store) => $e');
+        }
+      }
+
       return {
         'success': false,
-        'message': body['message'] ??
-            'Gagal mendaftar sebagai penjual. (${response.statusCode})',
+        'message': message,
         'raw': body,
+        'alreadyHasStore': alreadyHasStore, // info tambahan kalau mau dipakai
       };
     } on TimeoutException catch (e) {
       print('REGISTER STORE TIMEOUT: $e');
