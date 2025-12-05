@@ -21,6 +21,32 @@ class _DetailProductState extends State<DetailProduct> {
   bool _isFavorited = false;
   late String _favKey;
 
+  // ====== STATE ULASAN (LOKAL) ======
+  // Sekarang DIISI dengan dummy ulasan biar tampilan ulasan gak kosong
+  final List<_Review> _reviews = [
+    _Review(
+      userName: 'Rafael',
+      rating: 4.5,
+      comment:
+          'Kualitas bahan bagus, jahitan rapi. Dipakai nonton bola nyaman banget, nggak gerah.',
+      dateLabel: '2 hari lalu',
+    ),
+    _Review(
+      userName: 'Grace',
+      rating: 5.0,
+      comment:
+          'Warnanya sesuai foto, packing rapi, pengiriman juga cepat. Recommended seller!',
+      dateLabel: '5 hari lalu',
+    ),
+    _Review(
+      userName: 'Andi',
+      rating: 4.0,
+      comment:
+          'Overall oke, cuma sedikit longgar di bagian bahu. Tapi masih aman dipakai harian.',
+      dateLabel: '1 minggu lalu',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +91,12 @@ class _DetailProductState extends State<DetailProduct> {
     await prefs.setStringList('favorites', favs);
   }
 
+  double get _averageRating {
+    if (_reviews.isEmpty) return 0;
+    final total = _reviews.fold<double>(0, (sum, r) => sum + r.rating);
+    return total / _reviews.length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
@@ -107,32 +139,57 @@ class _DetailProductState extends State<DetailProduct> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ===================
+              // IMAGE CARD LEBIH WAH
+              // ===================
               Center(
-                child: Hero(
-                  tag: widget.product.imagePath,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: widget.product.imagePath.startsWith('http')
-                        ? Image.network(
-                            widget.product.imagePath,
-                            height: 180,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.broken_image, size: 80),
-                          )
-                        : Image.asset(
-                            widget.product.imagePath,
-                            height: 180,
-                            fit: BoxFit.contain,
-                          ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Colors.white,
+                        Color(0xFFE7F1FA),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  child: Hero(
+                    tag: widget.product.imagePath,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: widget.product.imagePath.startsWith('http')
+                          ? Image.network(
+                              widget.product.imagePath,
+                              height: 200,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.broken_image, size: 80),
+                            )
+                          : Image.asset(
+                              widget.product.imagePath,
+                              height: 200,
+                              fit: BoxFit.contain,
+                            ),
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // ===================
-              // NAMA & HARGA
+              // NAMA & HARGA + BADGE
               // ===================
               Text(
                 widget.product.name,
@@ -146,9 +203,9 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 4),
 
-              if (hasDiscount)
-                Row(
-                  children: [
+              Row(
+                children: [
+                  if (hasDiscount) ...[
                     Text(
                       'Rp ${_formatPrice(widget.product.price)}',
                       style: const TextStyle(
@@ -177,7 +234,8 @@ class _DetailProductState extends State<DetailProduct> {
                       ),
                     ),
                   ],
-                ),
+                ],
+              ),
 
               const SizedBox(height: 4),
 
@@ -185,10 +243,27 @@ class _DetailProductState extends State<DetailProduct> {
                 'Rp ${_formatPrice(discountedPrice)}',
                 style: const TextStyle(
                   color: Color(0xFF124170),
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
                 ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Chip info singkat (estetik, statis)
+              Row(
+                children: [
+                  _buildInfoChip(
+                    icon: Icons.local_shipping_outlined,
+                    label: 'Pengiriman cepat',
+                  ),
+                  const SizedBox(width: 6),
+                  _buildInfoChip(
+                    icon: Icons.verified_outlined,
+                    label: 'Produk original',
+                  ),
+                ],
               ),
 
               const SizedBox(height: 25),
@@ -213,7 +288,7 @@ class _DetailProductState extends State<DetailProduct> {
                       _isFavorited
                           ? Icons.favorite
                           : Icons.favorite_border_outlined,
-                      color: _isFavorited ? Colors.red : Color(0xFF124170),
+                      color: _isFavorited ? Colors.red : const Color(0xFF124170),
                       size: 28,
                     ),
                     onPressed: _toggleFavorite,
@@ -235,14 +310,25 @@ class _DetailProductState extends State<DetailProduct> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                       decoration: BoxDecoration(
-                        color:
-                            isSelected ? const Color(0xFF124170) : Colors.white,
+                        color: isSelected
+                            ? const Color(0xFF124170)
+                            : Colors.white,
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF124170)
                               : Colors.grey.shade300,
                         ),
                         borderRadius: BorderRadius.circular(8),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFF124170).withOpacity(0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : [],
                       ),
                       child: Text(
                         size,
@@ -257,8 +343,11 @@ class _DetailProductState extends State<DetailProduct> {
                 }).toList(),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
+              // ===================
+              // DESKRIPSI
+              // ===================
               const Text(
                 'Deskripsi',
                 style: TextStyle(
@@ -271,15 +360,232 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 6),
 
-              Text(
-                widget.product.description,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                  height: 1.5,
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.withOpacity(0.18)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.product.description,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                    height: 1.5,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ===================
+              // ULASAN PEMBELI
+              // ===================
+              const Text(
+                'Ulasan Pembeli',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.black87,
                   fontFamily: 'Poppins',
                 ),
               ),
+              const SizedBox(height: 6),
+
+              // Ringkasan rating
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.withOpacity(0.18)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5EDFF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFB800),
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _reviews.isEmpty
+                          ? const Text(
+                              'Belum ada ulasan. Jadilah yang pertama menulis ulasan untuk produk ini.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                                fontFamily: 'Poppins',
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      _averageRating.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                        color: Color(0xFF111827),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      size: 18,
+                                      color: Color(0xFFFFB800),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${_reviews.length} ulasan',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: _openAddReviewSheet,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF124170)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        'Tulis Ulasan',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF124170),
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              if (_reviews.isNotEmpty)
+                ListView.separated(
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _reviews.length,
+                  itemBuilder: (context, index) {
+                    final review = _reviews[index];
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: Colors.grey.withOpacity(0.15)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: const Color(0xFFE5EDFF),
+                                child: Text(
+                                  review.userName.isNotEmpty
+                                      ? review.userName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF124170),
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      review.userName,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        _buildStarRow(review.rating),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          review.dateLabel,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF9CA3AF),
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            review.comment,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                              height: 1.4,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
               const SizedBox(height: 100),
             ],
@@ -375,6 +681,243 @@ class _DetailProductState extends State<DetailProduct> {
     );
   }
 
+  // ====== HELPER UI & ULASAN ======
+
+  Widget _buildInfoChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5EDFF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF124170)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF124170),
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStarRow(double rating) {
+    const Color starColor = Color(0xFFFFB800);
+    final fullStars = rating.floor();
+    final hasHalf = (rating - fullStars) >= 0.5;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        if (index < fullStars) {
+          return const Icon(
+            Icons.star_rounded,
+            size: 14,
+            color: starColor,
+          );
+        } else if (index == fullStars && hasHalf) {
+          return const Icon(
+            Icons.star_half_rounded,
+            size: 14,
+            color: starColor,
+          );
+        } else {
+          return const Icon(
+            Icons.star_border_rounded,
+            size: 14,
+            color: starColor,
+          );
+        }
+      }),
+    );
+  }
+
+  void _openAddReviewSheet() async {
+    final commentController = TextEditingController();
+    double tempRating = 5;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Tulis Ulasan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF124170),
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Berikan rating untuk produk ini:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4B5563),
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildStarRow(tempRating),
+                      const SizedBox(width: 8),
+                      Text(
+                        tempRating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: tempRating,
+                    min: 1,
+                    max: 5,
+                    divisions: 8,
+                    label: tempRating.toStringAsFixed(1),
+                    activeColor: const Color(0xFF124170),
+                    onChanged: (val) {
+                      setModalState(() {
+                        tempRating = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Ulasan kamu:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4B5563),
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: commentController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Ceritakan pengalamanmu dengan produk ini...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(fontFamily: 'Poppins'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final comment =
+                                commentController.text.trim();
+
+                            if (comment.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Ulasan tidak boleh kosong.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final prefs =
+                                await SharedPreferences.getInstance();
+                            final name = prefs
+                                    .getString('current_user_name') ??
+                                'Pengguna';
+
+                            setState(() {
+                              _reviews.insert(
+                                0,
+                                _Review(
+                                  userName: name,
+                                  rating: tempRating,
+                                  comment: comment,
+                                  dateLabel: 'Baru saja',
+                                ),
+                              );
+                            });
+
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Terima kasih! Ulasan kamu telah ditambahkan.'),
+                                backgroundColor: Color(0xFF124170),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF124170),
+                          ),
+                          child: const Text(
+                            'Kirim',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   String _formatPrice(num price) {
     final val = price.round();
     final s = val.toString();
@@ -392,4 +935,20 @@ class _DetailProductState extends State<DetailProduct> {
 
     return buffer.toString().split('').reversed.join('');
   }
+}
+
+// ====== MODEL ULASAN LOKAL ======
+
+class _Review {
+  final String userName;
+  final double rating;
+  final String comment;
+  final String dateLabel;
+
+  _Review({
+    required this.userName,
+    required this.rating,
+    required this.comment,
+    required this.dateLabel,
+  });
 }

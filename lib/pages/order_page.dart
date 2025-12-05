@@ -93,7 +93,7 @@ class _OrderPageState extends State<OrderPage> {
   Widget _buildUnpaidTab(List<Product> orders) {
     return Column(
       children: [
-        // KARTU ALAMAT PENGIRIMAN (UI saja, logika tidak diubah)
+        // KARTU ALAMAT PENGIRIMAN (UI saja, tanpa tombol ubah alamat)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Container(
@@ -150,29 +150,7 @@ class _OrderPageState extends State<OrderPage> {
                     ],
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    // UI saja: bisa ditambahkan logika edit alamat nanti
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur ubah alamat belum diimplementasi.'),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                    minimumSize: const Size(0, 0),
-                  ),
-                  child: const Text(
-                    'Ubah',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
+                // Tombol "Ubah" dan SnackBar dihapus sesuai permintaan
               ],
             ),
           ),

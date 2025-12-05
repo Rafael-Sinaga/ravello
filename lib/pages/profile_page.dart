@@ -23,6 +23,7 @@ class CustomerServicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
+    const Color lightBackground = Color(0xFFF8FBFD);
 
     return Scaffold(
       appBar: AppBar(
@@ -36,64 +37,226 @@ class CustomerServicePage extends StatelessWidget {
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: primaryColor),
         elevation: 0,
+        centerTitle: true,
       ),
-      backgroundColor: const Color(0xFFF8FBFD),
-      body: Padding(
+      backgroundColor: lightBackground,
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Hubungi Customer Service',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          children: [
+            // HEADER CARD
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF124170),
+                    Color(0xFF1C6BA4),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              SizedBox(height: 12),
-              Text(
-                'Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi layanan pelanggan melalui detail berikut:',
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 14,
-                ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.headset_mic_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Butuh Bantuan?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Tim customer service kami siap membantu pertanyaan dan kendala transaksi Anda.',
+                          style: TextStyle(
+                            color: Color(0xFFE5EDF6),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 20),
-              Text(
-                'Email:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // KONTEN DETAIL KONTAK
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withOpacity(0.18)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              Text('support@tokoapp.com'),
-              SizedBox(height: 16),
-              Text(
-                'Jam Operasional:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Hubungi Customer Service',
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi layanan pelanggan melalui detail berikut:',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Email row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Color(0xFFE5EDFF),
+                        child: Icon(
+                          Icons.email_outlined,
+                          color: primaryColor,
+                          size: 20,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Email',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'support@tokoapp.com',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF4B5563),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Jam operasional
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Color(0xFFE2F4E8),
+                        child: Icon(
+                          Icons.access_time_rounded,
+                          color: primaryColor,
+                          size: 20,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Jam Operasional',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Senin - Jumat, 08.00 - 17.00 WIB',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF4B5563),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+                  const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                  const SizedBox(height: 12),
+
+                  // Info respons
+                  Row(
+                    children: const [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: primaryColor,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Balasan biasanya diterima dalam waktu kurang dari 1x24 jam pada hari kerja.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              Text('Senin - Jumat, 08.00 - 17.00 WIB'),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -110,42 +273,155 @@ class FAQPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF124170);
+    const Color lightBackground = Color(0xFFF8FBFD);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'FAQ',
-          style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
         ),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: primaryColor),
         elevation: 0,
+        centerTitle: true,
       ),
-      backgroundColor: const Color(0xFFF8FBFD),
+      backgroundColor: lightBackground,
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          ExpansionTile(
-            title: Text('Bagaimana cara melakukan pemesanan?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                    'Anda dapat melakukan pemesanan melalui halaman produk dan memilih tombol "Tambah ke Keranjang".'),
-              )
-            ],
+        children: [
+          // HEADER
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withOpacity(0.16)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: const [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Color(0xFFE5EDFF),
+                  child: Icon(
+                    Icons.help_outline_rounded,
+                    color: primaryColor,
+                    size: 26,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Beberapa pertanyaan yang sering diajukan terkait pemesanan dan komunikasi dengan penjual.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4B5563),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          ExpansionTile(
-            title: Text('Bagaimana cara menghubungi penjual?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                    'Anda dapat menghubungi penjual melalui halaman produk yang menyediakan fitur kontak.'),
-              )
-            ],
+
+          const SizedBox(height: 18),
+
+          const Text(
+            'Pertanyaan Umum',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // LIST FAQ KARTU
+          _FaqItem(
+            question: 'Bagaimana cara melakukan pemesanan?',
+            answer:
+                'Anda dapat melakukan pemesanan melalui halaman produk dan memilih tombol "Tambah ke Keranjang". Setelah itu, lanjutkan ke halaman keranjang dan ikuti langkah checkout hingga pembayaran selesai.',
+          ),
+          const SizedBox(height: 10),
+          _FaqItem(
+            question: 'Bagaimana cara menghubungi penjual?',
+            answer:
+                'Anda dapat menghubungi penjual melalui halaman produk yang menyediakan fitur kontak. Gunakan fitur pesan untuk menanyakan detail produk, pengiriman, atau hal lain sebelum melakukan pembelian.',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatelessWidget {
+  final String question;
+  final String answer;
+
+  const _FaqItem({
+    super.key,
+    required this.question,
+    required this.answer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.withOpacity(0.16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: primaryColor.withOpacity(0.06),
+          highlightColor: primaryColor.withOpacity(0.03),
+        ),
+        child: ExpansionTile(
+          tilePadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding:
+              const EdgeInsets.only(left: 16, right: 16, bottom: 14),
+          iconColor: primaryColor,
+          collapsedIconColor: const Color(0xFF6F7A74),
+          title: Text(
+            question,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: primaryColor,
+            ),
+          ),
+          children: [
+            Text(
+              answer,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: Color(0xFF4B5563),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -417,36 +693,57 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Colors.white,
+                      Color(0xFFE7F1FA),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.16)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    // FOTO PROFIL DINAMIS
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      backgroundImage: _profileImagePath != null
-                          ? (kIsWeb
-                              ? NetworkImage(_profileImagePath!)
-                              : FileImage(File(_profileImagePath!))
-                                  as ImageProvider)
-                          : null,
-                      child: _profileImagePath == null
-                          ? const Icon(
-                              Icons.person,
-                              size: 32,
-                              color: Color(0xFF9CA3AF),
-                            )
-                          : null,
+                    // FOTO PROFIL DINAMIS + RING GRADIENT
+                    Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF124170),
+                            Color(0xFF1C6BA4),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.white,
+                        backgroundImage: _profileImagePath != null
+                            ? (kIsWeb
+                                ? NetworkImage(_profileImagePath!)
+                                : FileImage(File(_profileImagePath!))
+                                    as ImageProvider)
+                            : null,
+                        child: _profileImagePath == null
+                            ? const Icon(
+                                Icons.person,
+                                size: 32,
+                                color: Color(0xFF9CA3AF),
+                              )
+                            : null,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -458,19 +755,27 @@ class _ProfilePageState extends State<ProfilePage> {
                             const Text(
                               'Halo,',
                               style: TextStyle(
-                                  color: Color(0xFF6F7A74), fontSize: 13),
+                                color: Color(0xFF6F7A74),
+                                fontSize: 13,
+                              ),
                             ),
+                            const SizedBox(height: 2),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  nameToShow,
-                                  style: const TextStyle(
-                                    color: primaryColor,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    nameToShow,
+                                    style: const TextStyle(
+                                      color: primaryColor,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                const SizedBox(width: 6),
                                 const Icon(
                                   Icons.edit,
                                   size: 18,
@@ -478,36 +783,78 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 4),
                             Text(
                               emailToShow,
                               style: const TextStyle(
-                                  color: Colors.grey, fontSize: 13),
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
                             ),
                             if (_phoneNumber != null &&
-                                _phoneNumber!.trim().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  _phoneNumber!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF6F7A74),
-                                    fontSize: 13,
-                                  ),
+                                _phoneNumber!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                _phoneNumber!,
+                                style: const TextStyle(
+                                  color: Color(0xFF6F7A74),
+                                  fontSize: 13,
                                 ),
                               ),
-                            if (descToShow != null && descToShow.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  descToShow,
-                                  style: const TextStyle(
-                                    color: Colors.black54,
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                            ],
+                            if (descToShow != null &&
+                                descToShow.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                descToShow,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 13,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
+                            ],
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _isSeller
+                                        ? const Color(0xFFE2F4E8)
+                                        : const Color(0xFFE5EDFF),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _isSeller
+                                            ? Icons.store_mall_directory_rounded
+                                            : Icons.person_outline_rounded,
+                                        size: 14,
+                                        color: primaryColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _isSeller
+                                            ? 'Akun Penjual Aktif'
+                                            : 'Akun Pembeli',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -559,22 +906,37 @@ class _ProfilePageState extends State<ProfilePage> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    elevation: 3,
+                    shadowColor: primaryColor.withOpacity(0.3),
                   ),
                 ),
               ),
 
               // ================== AKUN SAYA ===================
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 10),
-                child: Text(
-                  'Akun Saya',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Akun Saya',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -612,15 +974,28 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 20),
 
               // =============== LAINNYA (FAQ + CUSTOMER SERVICE) ===============
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 10),
-                child: Text(
-                  'Lainnya',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Lainnya',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

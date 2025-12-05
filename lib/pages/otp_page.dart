@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // untuk inputFormatters
 import 'login_page.dart';
 import '../services/auth_service.dart';
 
@@ -24,6 +25,12 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
   int _remainingSeconds = 60;
   late Timer _timer;
 
+  bool _isSending = false;
+  bool _isVerifying = false;
+
+  static const Color _primaryColor = Color(0xFF124170);
+  static const Color _backgroundColor = Color(0xFFF8FDFA);
+
   @override
   void initState() {
     super.initState();
@@ -42,18 +49,55 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     });
   }
 
-  void _sendOTP() async {
-    final res = await AuthService.sendOtp(widget.phoneNumber);
-    if (res['success'] != true) {
-      // tampilkan message (tetap UI sama)
+  Future<void> _sendOTP() async {
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
+      final res = await AuthService.sendOtp(widget.phoneNumber);
+
+      if (res['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Gagal mengirim OTP')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              res['message'] ?? 'Kode OTP telah dikirim.',
+            ),
+            backgroundColor: _primaryColor,
+          ),
+        );
+      }
+    } on TimeoutException {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Gagal mengirim OTP')),
+        const SnackBar(
+          content: Text(
+              'Koneksi ke server melebihi batas waktu. Coba lagi beberapa saat.'),
+          backgroundColor: Colors.red,
+        ),
       );
+    } catch (e) {
+      // jaga-jaga kalau terjadi FormatException / error koneksi lain
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Kesalahan koneksi: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
   void _resendOTP() {
-    if (_remainingSeconds == 0) {
+    if (_remainingSeconds == 0 && !_isSending) {
       setState(() => _remainingSeconds = 60);
       _startTimer();
       _sendOTP();
@@ -74,6 +118,8 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
   }
 
   Future<void> _verifyOTP() async {
+    if (_isVerifying) return;
+
     String otp = _otpControllers.map((c) => c.text).join();
 
     if (otp.length != 6) {
@@ -86,38 +132,71 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       return;
     }
 
+    setState(() {
+      _isVerifying = true;
+    });
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final result = await AuthService.verifyOtp(widget.phoneNumber, otp);
+    try {
+      final result = await AuthService.verifyOtp(widget.phoneNumber, otp);
 
-    Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop(); // tutup dialog
 
-    if (result['success']) {
-      // ✅ SUCCESS: snackBar hijau
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message'] ?? 'Akun berhasil didaftarkan. Silakan login.',
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message'] ?? 'Akun berhasil didaftarkan. Silakan login.',
+            ),
+            backgroundColor: const Color(0xFF16A34A),
           ),
-          backgroundColor: const Color(0xFF16A34A), // hijau
-        ),
-      );
+        );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Verifikasi gagal'),
-          backgroundColor: Colors.red,
-        ),
-      );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Verifikasi gagal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } on TimeoutException {
+      if (mounted) {
+        Navigator.of(context).pop(); // tutup dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Verifikasi memakan waktu terlalu lama. Coba lagi beberapa saat.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // tutup dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan koneksi: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
     }
   }
 
@@ -141,9 +220,8 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    // UI sama persis seperti yang lu punya (layout), hanya styling kotak OTP yg di-improve
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FDFA),
+      backgroundColor: _backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -157,109 +235,156 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
-              const Text(
-                'Masukkan Kode OTP',
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700),
+              const SizedBox(height: 4),
+              // HEADER KARTU ESTETIK
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _primaryColor.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.verified_user_outlined,
+                        color: _primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Masukkan Kode OTP',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: _primaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Kami telah mengirimkan kode OTP ke ${widget.phoneNumber}. Silakan masukkan kode yang diterima untuk menyelesaikan verifikasi.',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              color: Color(0xFF8EA0A7),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.lock_outline_rounded,
+                                size: 14,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Kode ini bersifat rahasia, jangan bagikan ke siapa pun.',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Kami telah mengirimkan kode OTP ke ${widget.phoneNumber}. Silakan masukkan kode yang diterima.',
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: Color(0xFF8EA0A7),
-                    height: 1.4),
-              ),
-              const SizedBox(height: 24),
 
+              const SizedBox(height: 28),
+
+              // OTP BOXES
               Center(
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(6, (index) {
-                        final filled =
-                            _otpControllers[index].text.isNotEmpty; // 🔹 STATUS TERISI
-
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: filled
-                                ? const Color(0xFFE7F7EE) // hijau tipis kalau terisi
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 6,
-                              )
-                            ],
-                            border: Border.all(
-                              color: filled
-                                  ? const Color(0xFF22A45D)
-                                      .withOpacity(0.7) // border hijau lembut
-                                  : const Color(0xFFE6E9EB),
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _otpControllers[index],
-                            focusNode: _otpFocusNodes[index],
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700),
-                            decoration: const InputDecoration(
-                                counterText: '',
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero),
-                            onChanged: (v) {
-                              // 🔹 trigger rebuild biar warna kotak update
-                              setState(() {});
-                              if (v.length == 1 && index < 5) {
-                                _otpFocusNodes[index + 1].requestFocus();
-                              }
-                              if (v.isEmpty && index > 0) {
-                                _otpFocusNodes[index - 1].requestFocus();
-                              }
-                            },
-                          ),
-                        );
+                        return _buildOtpBox(index);
                       }),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Masukkan 6 digit kode yang kamu terima',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.timer_outlined,
                             size: 16, color: Color(0xFF7D98A6)),
                         const SizedBox(width: 8),
-                        Text(_formatTime(_remainingSeconds),
-                            style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF273E47))),
+                        Text(
+                          _formatTime(_remainingSeconds),
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF273E47),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         GestureDetector(
-                          onTap: _remainingSeconds == 0 ? _resendOTP : null,
-                          child: Text(
-                            'Kirim ulang',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                color: _remainingSeconds == 0
-                                    ? const Color(0xFF124170)
-                                    : Colors.grey[400],
-                                fontWeight: _remainingSeconds == 0
-                                    ? FontWeight.w600
-                                    : FontWeight.normal),
+                          onTap: _remainingSeconds == 0 && !_isSending
+                              ? _resendOTP
+                              : null,
+                          child: Row(
+                            children: [
+                              if (_isSending)
+                                const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(_primaryColor),
+                                  ),
+                                ),
+                              if (_isSending) const SizedBox(width: 6),
+                              Text(
+                                'Kirim ulang',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  color: _remainingSeconds == 0 && !_isSending
+                                      ? _primaryColor
+                                      : Colors.grey[400],
+                                  fontWeight:
+                                      _remainingSeconds == 0 && !_isSending
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -268,18 +393,35 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _verifyOTP,
+                        onPressed: _isVerifying ? null : _verifyOTP,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6180A0),
+                          backgroundColor: _primaryColor.withOpacity(
+                              _isVerifying ? 0.6 : 1.0),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 2,
+                          shadowColor: _primaryColor.withOpacity(0.3),
                         ),
-                        child: const Text('Verifikasi Kode OTP',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600)),
+                        child: _isVerifying
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Verifikasi Kode OTP',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -289,20 +431,98 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
               const Spacer(),
               Center(
                 child: TextButton(
-                  onPressed: _remainingSeconds == 0 ? _resendOTP : null,
+                  onPressed:
+                      _remainingSeconds == 0 && !_isSending ? _resendOTP : null,
                   child: Text(
                     'Kirim ulang kode OTP',
                     style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: _remainingSeconds == 0
-                            ? const Color(0xFF124170)
-                            : Colors.grey[400]),
+                      fontFamily: 'Poppins',
+                      color: _remainingSeconds == 0 && !_isSending
+                          ? _primaryColor
+                          : Colors.grey[400],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ================== UI HELPER: KOTAK OTP ==================
+
+  Widget _buildOtpBox(int index) {
+    final bool filled = _otpControllers[index].text.isNotEmpty;
+    final bool isFocused = _otpFocusNodes[index].hasFocus;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      width: 56,
+      height: 64,
+      decoration: BoxDecoration(
+        color: filled ? const Color(0xFFE7F7EE) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: _primaryColor.withOpacity(0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+        border: Border.all(
+          width: isFocused ? 1.6 : 1.2,
+          color: isFocused
+              ? _primaryColor
+              : (filled
+                  ? const Color(0xFF22A45D).withOpacity(0.7)
+                  : const Color(0xFFE1E5EB)),
+        ),
+      ),
+      child: Center(
+        child: TextField(
+          controller: _otpControllers[index],
+          focusNode: _otpFocusNodes[index],
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(1),
+          ],
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            height: 1.0,
+          ),
+          decoration: const InputDecoration(
+            counterText: '',
+            border: InputBorder.none,
+            isCollapsed: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+          onChanged: (v) {
+            setState(() {});
+            if (v.length == 1 && index < 5) {
+              _otpFocusNodes[index + 1].requestFocus();
+            }
+            if (v.isEmpty && index > 0) {
+              _otpFocusNodes[index - 1].requestFocus();
+            }
+          },
         ),
       ),
     );
