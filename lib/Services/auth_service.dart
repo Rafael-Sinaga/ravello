@@ -99,7 +99,11 @@ class AuthService {
         await prefs.setString('current_user_name', currentUser?.name ?? '');
         await prefs.setString('current_user_email', currentUser?.email ?? '');
         await prefs.setInt('current_user_id', currentUser?.id ?? 0);
+
+        // 🔁 simpan status penjual berbasis backend
         await prefs.setBool('isSeller', currentUser!.isSeller);
+        // 🔁 mirror ke flag lokal lama (buat kompatibel dengan kode lain yang masih pakai)
+        await prefs.setBool('isSeller_local', currentUser!.isSeller);
 
         return {'success': true, 'data': body};
       } else {
@@ -229,6 +233,10 @@ class AuthService {
       if (prefs.containsKey('isSeller')) {
         await prefs.remove('isSeller');
       }
+      // 🔁 bersihkan juga mirror lama
+      if (prefs.containsKey('isSeller_local')) {
+        await prefs.remove('isSeller_local');
+      }
       if (prefs.containsKey('profile_image_path')) {
         await prefs.remove('profile_image_path');
       }
@@ -268,7 +276,11 @@ class AuthService {
   /// ✅ Set seller status (dipanggil setelah daftar penjual & backend sukses update)
   static Future<void> setSellerStatus(bool status) async {
     final prefs = await SharedPreferences.getInstance();
+
+    // simpan status utama (mirror backend)
     await prefs.setBool('isSeller', status);
+    // mirror ke flag lama supaya kode lain yang masih pakai tetap sinkron
+    await prefs.setBool('isSeller_local', status);
 
     if (currentUser != null) {
       currentUser!.isSeller = status;
@@ -284,11 +296,19 @@ class AuthService {
       return currentUser!.isSeller;
     }
 
-    // 2️⃣ Fallback: nilai terakhir yang pernah disimpan (mis. sebelum currentUser terisi)
+    // 2️⃣ Fallback: nilai terakhir yang pernah disimpan
     try {
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getBool('isSeller') ?? false;
-      return stored;
+
+      // prefer kunci baru
+      final bool? stored = prefs.getBool('isSeller');
+      if (stored != null) {
+        return stored;
+      }
+
+      // fallback ke kunci lama (buat kompatibel)
+      final bool? local = prefs.getBool('isSeller_local');
+      return local ?? false;
     } catch (e) {
       print('AuthService.getSellerStatus error: $e');
       return false;

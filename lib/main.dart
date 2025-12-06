@@ -1,7 +1,6 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/foundation.dart'; // untuk kDebugMode
 
 // === Pages ===
 import 'package:ravello/pages/splash_screen.dart';
@@ -16,7 +15,6 @@ import 'package:ravello/pages/favorite_page.dart';
 import 'package:ravello/pages/order_page.dart';
 
 // ⭐ Seller-related pages
-// ⬇️ SUSUN SUPAYA SAMA DENGAN NAMA FILE YANG LU PUNYA
 import 'package:ravello/pages/verify_seller_Page.dart';
 import 'package:ravello/pages/seller_dashboard.dart';
 
@@ -31,7 +29,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
-        ChangeNotifierProvider(create: (_) => AddressProvider()), // <--- TAMBAHAN
+        ChangeNotifierProvider(create: (_) => AddressProvider()),
       ],
       child: const RavelloApp(),
     ),
@@ -48,7 +46,9 @@ class RavelloApp extends StatelessWidget {
       title: 'Ravello E-Commerce',
       theme: ThemeData(
         fontFamily: 'Poppins',
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF124170)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF124170),
+        ),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
@@ -66,7 +66,6 @@ class RavelloApp extends StatelessWidget {
 
         // ⭐ Seller routes
         '/verify-seller': (context) => const VerifySellerPage(),
-        // pastikan class di seller_dashboard.dart memang `SellerDashboardPage`
         '/seller-dashboard': (context) => const SellerDashboardPage(),
       },
     );
@@ -88,16 +87,12 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   }
 
   Future<void> _navigateAfterSplash() async {
-    await Future.delayed(const Duration(seconds: 2));
+    // ⬇️ Sama dengan timer di SplashScreen (4 detik)
+    await Future.delayed(const Duration(seconds: 4));
     if (!mounted) return;
 
-    if (kDebugMode) {
-      // Saat debug, langsung ke home.
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      // Flow normal untuk release
-      Navigator.pushReplacementNamed(context, '/onboarding');
-    }
+    // Selalu mulai dari onboarding (debug & release)
+    Navigator.pushReplacementNamed(context, '/onboarding');
   }
 
   @override

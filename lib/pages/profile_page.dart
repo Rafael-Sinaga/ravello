@@ -444,7 +444,8 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _profileImagePath; // path foto profil
   String? _phoneNumber; // nomor telepon
 
-  bool _isSeller = false; // ← STATE LOKAL STATUS PENJUAL
+  // STATUS PENJUAL – sumber kebenaran tetap dari AuthService (backend + SharedPreferences)
+  bool _isSeller = false;
 
   @override
   void initState() {
@@ -456,21 +457,20 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadLocalNameAndPhone();
   }
 
-  /// 🔥 SEKARANG MURNI PAKAI FLAG LOKAL
-  /// TIDAK LAGI MENGGUNAKAN AuthService.getSellerStatus()
+  /// Ambil status penjual dari AuthService (backend / shared prefs),
+  /// supaya konsisten di semua device selama user login.
   Future<void> _loadSellerStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final localFlag = prefs.getBool('isSeller_local') ?? false;
+      final status = await AuthService.getSellerStatus();
 
       if (!mounted) return;
       setState(() {
-        _isSeller = localFlag;
+        _isSeller = status;
       });
 
-      print('PROFILE _isSeller (from local isSeller_local) = $_isSeller');
+      print('PROFILE _isSeller (from AuthService.getSellerStatus) = $_isSeller');
     } catch (e) {
-      print('Gagal load seller status dari SharedPreferences: $e');
+      print('Gagal load seller status: $e');
     }
   }
 

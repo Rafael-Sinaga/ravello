@@ -26,6 +26,7 @@ class ProductService {
     required int stock,
     required int categoryId,
     XFile? imageFile,
+    bool isBoosted = false, // <- flag boost opsional
   }) async {
     try {
       final token = await AuthService.getToken();
@@ -54,6 +55,7 @@ class ProductService {
           'stock: $stock, '
           'category_id: $categoryId, '
           'store_id: $storeId, '
+          'is_boosted: $isBoosted, '
           'hasImage: ${imageFile != null}'
           '}');
 
@@ -69,6 +71,7 @@ class ProductService {
           'price': price,
           'stock': stock,
           'category_id': categoryId,
+          'is_boosted': isBoosted,
         };
 
         if (storeId != null) {
@@ -97,6 +100,7 @@ class ProductService {
         request.fields['price'] = price.toString();
         request.fields['stock'] = stock.toString();
         request.fields['category_id'] = categoryId.toString();
+        request.fields['is_boosted'] = isBoosted ? '1' : '0';
         if (storeId != null) {
           request.fields['store_id'] = storeId.toString();
         }
@@ -239,23 +243,80 @@ class ProductService {
 
   /// Ambil semua produk untuk ditampilkan di beranda
   static Future<List<Product>> fetchProducts() async {
+    final client = http.Client();
+
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/product');
-      final response = await http.get(url).timeout(_timeoutDuration);
+      // Coba beberapa kemungkinan endpoint supaya tetap jalan
+      final candidates = <Uri>[
+        Uri.parse('${ApiConfig.baseUrl}/product'),
+        Uri.parse('${ApiConfig.baseUrl}/products'),
+        Uri.parse('${ApiConfig.baseUrl}/api/product'),
+        Uri.parse('${ApiConfig.baseUrl}/api/products'),
+      ];
 
-      print('FETCH PRODUCTS status: ${response.statusCode}');
-      final preview = response.body.length > 200
-          ? response.body.substring(0, 200)
-          : response.body;
-      print('FETCH PRODUCTS body  : $preview');
+      http.Response? successResponse;
+      http.Response? lastResponse;
 
-      if (response.statusCode != 200) {
+      for (final url in candidates) {
+        print('FETCH PRODUCTS try URL: $url');
+
+        final response = await client
+            .get(
+              url,
+              headers: {
+                'Accept': 'application/json',
+              },
+            )
+            .timeout(_timeoutDuration);
+
+        print('FETCH PRODUCTS status: ${response.statusCode}');
+        final preview = response.body.length > 200
+            ? response.body.substring(0, 200)
+            : response.body;
+        print('FETCH PRODUCTS body  : $preview');
+
+        lastResponse = response;
+
+        if (response.statusCode == 200) {
+          successResponse = response;
+          break;
+        }
+
+        // Kalau 404, coba endpoint berikutnya
+        if (response.statusCode == 404) {
+          continue;
+        }
+
+        // Selain 200/404 anggap error
         throw Exception('Gagal memuat produk. Status: ${response.statusCode}');
+      }
+
+      // Tidak ada satu pun endpoint yang kasih 200
+      if (successResponse == null) {
+        if (lastResponse != null && lastResponse.statusCode == 404) {
+          print(
+              'FETCH PRODUCTS: semua endpoint 404, kembalikan list kosong (anggap belum ada produk).');
+          return <Product>[];
+        }
+        throw Exception('Gagal memuat produk dari server.');
+      }
+
+      // Deteksi kalau server balikin HTML (misroute ke halaman web)
+      final bodyText = successResponse.body.trim();
+      final contentType = successResponse.headers['content-type'] ?? '';
+      final bool looksLikeHtml = bodyText.startsWith('<!DOCTYPE html') ||
+          bodyText.startsWith('<html') ||
+          contentType.contains('text/html');
+
+      if (looksLikeHtml) {
+        print(
+            'FETCH PRODUCTS ERROR: server mengembalikan HTML, bukan JSON. Kembalikan list kosong.');
+        return <Product>[];
       }
 
       dynamic decoded;
       try {
-        decoded = jsonDecode(response.body);
+        decoded = jsonDecode(successResponse.body);
       } catch (e) {
         print('FETCH PRODUCTS JSON DECODE ERROR: $e');
         throw Exception('Respons produk bukan JSON valid.');
@@ -288,6 +349,195 @@ class ProductService {
     } catch (e) {
       print('FETCH PRODUCTS ERROR: $e');
       rethrow;
+    } finally {
+      client.close();
+    }
+  }
+
+  // ======================= UPDATE PRODUK =======================
+
+  static Future<Map<String, dynamic>> updateProduct({
+    required int productId,
+    required String name,
+    required String description,
+    required double price,
+    required int stock,
+    required int categoryId,
+    bool? isBoosted, // <- opsional, supaya nanti bisa ikut diupdate kalau perlu
+  }) async {
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Token tidak tersedia. Silakan login ulang.',
+        };
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/product/$productId');
+
+      final bodyMap = <String, dynamic>{
+        'product_name': name,
+        'description': description,
+        'price': price,
+        'stock': stock,
+        'category_id': categoryId,
+      };
+
+      if (isBoosted != null) {
+        bodyMap['is_boosted'] = isBoosted;
+      }
+
+      final body = jsonEncode(bodyMap);
+
+      final response = await http
+          .put(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: body,
+          )
+          .timeout(_timeoutDuration);
+
+      print('UPDATE PRODUCT status: ${response.statusCode}');
+      final preview = response.body.length > 200
+          ? response.body.substring(0, 200)
+          : response.body;
+      print('UPDATE PRODUCT body  : $preview');
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (e) {
+        print('UPDATE PRODUCT JSON DECODE ERROR: $e');
+        return {
+          'success': false,
+          'message':
+              'Gagal membaca respons server saat mengubah produk (bukan JSON valid).',
+          'raw_body': response.body,
+        };
+      }
+
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Produk berhasil diperbarui.',
+          'raw': decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded is Map<String, dynamic>
+            ? (decoded['message'] ??
+                'Server tidak mengkonfirmasi perubahan produk.')
+            : 'Server tidak mengkonfirmasi perubahan produk.',
+        'raw': decoded,
+      };
+    } on TimeoutException catch (e) {
+      print('UPDATE PRODUCT TIMEOUT: $e');
+      return {
+        'success': false,
+        'message': 'Koneksi timeout saat mengubah produk. Coba lagi.',
+      };
+    } catch (e) {
+      print('UPDATE PRODUCT ERROR: $e');
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan saat mengubah produk: $e',
+      };
+    }
+  }
+
+  // ======================= HAPUS PRODUK =======================
+
+  static Future<Map<String, dynamic>> deleteProduct(int productId) async {
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Token tidak tersedia. Silakan login ulang.',
+        };
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/product/$productId');
+
+      final response = await http
+          .delete(
+            url,
+            headers: {
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(_timeoutDuration);
+
+      print('DELETE PRODUCT status: ${response.statusCode}');
+      final preview = response.body.length > 200
+          ? response.body.substring(0, 200)
+          : response.body;
+      print('DELETE PRODUCT body  : $preview');
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (e) {
+        print('DELETE PRODUCT JSON DECODE ERROR: $e');
+        // Banyak API DELETE balikin body kosong → anggap sukses kalau status 200/204
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          return {
+            'success': true,
+            'message': 'Produk berhasil dihapus.',
+            'raw_body': response.body,
+          };
+        }
+        return {
+          'success': false,
+          'message':
+              'Gagal membaca respons server saat menghapus produk.',
+          'raw_body': response.body,
+        };
+      }
+
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Produk berhasil dihapus.',
+          'raw': decoded,
+        };
+      }
+
+      // fallback kalau backend nggak kirim {success:true}
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return {
+          'success': true,
+          'message': 'Produk berhasil dihapus.',
+          'raw': decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded is Map<String, dynamic>
+            ? (decoded['message'] ??
+                'Server tidak mengkonfirmasi penghapusan produk.')
+            : 'Server tidak mengkonfirmasi penghapusan produk.',
+        'raw': decoded,
+      };
+    } on TimeoutException catch (e) {
+      print('DELETE PRODUCT TIMEOUT: $e');
+      return {
+        'success': false,
+        'message': 'Koneksi timeout saat menghapus produk. Coba lagi.',
+      };
+    } catch (e) {
+      print('DELETE PRODUCT ERROR: $e');
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan saat menghapus produk: $e',
+      };
     }
   }
 }

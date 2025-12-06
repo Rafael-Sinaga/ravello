@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/product_model.dart';
 import '../services/product_service.dart';
 
 class ManageProductsPage extends StatefulWidget {
@@ -19,6 +22,125 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
   // list produk (awal kosong, tidak ada dummy)
   final List<_ProductItem> _products = [];
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyProducts();
+  }
+
+  Future<void> _loadMyProducts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storeId = prefs.getInt('storeId');
+
+      // 🔥 Ambil daftar produk yang sedang di-boost dari SharedPreferences
+      final boostedList = prefs.getStringList('boosted_product_ids') ?? <String>[];
+      final boostedIds = boostedList
+          .map((e) => int.tryParse(e))
+          .whereType<int>()
+          .toSet();
+
+      // Ambil semua produk dari backend
+      final allProducts = await ProductService.fetchProducts();
+
+      // Filter produk yang punya storeId sama dengan toko ini
+      final myProducts = storeId == null
+          ? allProducts
+          : allProducts.where((p) => p.storeId == storeId).toList();
+
+      setState(() {
+        _products
+          ..clear()
+          ..addAll(
+            myProducts.map(
+              (p) => _ProductItem.fromProduct(
+                p,
+                isBoosted: p.productId != null &&
+                    boostedIds.contains(p.productId),
+              ),
+            ),
+          );
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Gagal memuat produk: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // 🔥 Toggle status boost untuk satu produk
+  Future<void> _toggleBoost(_ProductItem product) async {
+    if (product.productId == null) {
+      // Produk belum punya ID backend → nanti kalau sudah tersimpan bisa di-boost
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produk belum memiliki ID dari server, boost akan aktif setelah produk tersimpan.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> boostedList =
+        prefs.getStringList('boosted_product_ids') ?? <String>[];
+
+    final idStr = product.productId.toString();
+    bool newStatus;
+
+    if (boostedList.contains(idStr)) {
+      // matikan boost
+      boostedList.remove(idStr);
+      newStatus = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '"${product.name}" tidak di-boost lagi.',
+          ),
+        ),
+      );
+    } else {
+      // aktifkan boost
+      boostedList.add(idStr);
+      newStatus = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '"${product.name}" sedang di-boost dan akan tampil lebih menonjol.',
+          ),
+        ),
+      );
+    }
+
+    await prefs.setStringList('boosted_product_ids', boostedList);
+
+    // update state lokal
+    if (!mounted) return;
+    setState(() {
+      final index = _products.indexWhere(
+        (p) => p.productId == product.productId,
+      );
+      if (index != -1) {
+        _products[index] = _products[index].copyWith(isBoosted: newStatus);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,27 +182,48 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
           // ====== LIST PRODUK ======
           Expanded(
-            child: _products.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Belum ada produk.\nTambahkan produk pertama kamu.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6F7A74),
-                      ),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    itemCount: _products.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final product = _products[index];
-                      return _buildProductCard(product, index);
-                    },
-                  ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : (_errorMessage != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24.0, vertical: 8),
+                          child: Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6F7A74),
+                            ),
+                          ),
+                        ),
+                      )
+                    : _products.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Belum ada produk.\nTambahkan produk pertama kamu.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF6F7A74),
+                              ),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _loadMyProducts,
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              itemCount: _products.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final product = _products[index];
+                                return _buildProductCard(product, index);
+                              },
+                            ),
+                          )),
           ),
 
           // ====== TOMBOL TAMBAH PRODUK ======
@@ -132,21 +275,25 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         );
       }
 
-      if (kIsWeb) {
-        // Flutter Web → pakai network
+      final path = product.imagePath!;
+      final isNetworkImage =
+          path.startsWith('http://') || path.startsWith('https://');
+
+      if (kIsWeb || isNetworkImage) {
+        // Flutter Web atau URL gambar dari backend
         return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.network(
-            product.imagePath!,
+            path,
             fit: BoxFit.cover,
           ),
         );
       } else {
-        // Mobile / desktop → pakai File
+        // Mobile / desktop dengan path lokal (File)
         return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.file(
-            File(product.imagePath!),
+            File(path),
             fit: BoxFit.cover,
           ),
         );
@@ -166,77 +313,173 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        leading: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE3ECF4),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: _buildThumb(),
-        ),
-        title: Text(
-          product.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: primaryColor,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              'Rp ${product.price.toStringAsFixed(0)}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2E7D32),
+      child: Stack(
+        children: [
+          // ListTile utama (produk)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, right: 6, bottom: 2),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              leading: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3ECF4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: _buildThumb(),
+              ),
+              title: Text(
+                product.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rp ${product.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Stok: ${product.stock}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6F7A74),
+                    ),
+                  ),
+                ],
+              ),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _openAddProductSheet(
+                      editing: true,
+                      product: product,
+                      index: index,
+                    );
+                  } else if (value == 'delete') {
+                    _deleteProduct(product, index);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Edit produk'),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Hapus produk'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              'Stok: ${product.stock}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6F7A74),
+          ),
+
+          // 🔥 Tombol Boost mengambang di pojok kanan atas
+          Positioned(
+            top: 6,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => _toggleBoost(product),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: product.isBoosted
+                      ? const Color(0xFFFFF3E0)
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: product.isBoosted
+                        ? const Color(0xFFF97316)
+                        : primaryColor.withOpacity(0.55),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 14,
+                      color: product.isBoosted
+                          ? const Color(0xFFEA580C)
+                          : primaryColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      product.isBoosted ? 'Boost aktif' : 'Boost',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: product.isBoosted
+                            ? const Color(0xFFEA580C)
+                            : primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'edit') {
-              _openAddProductSheet(
-                editing: true,
-                product: product,
-                index: index,
-              );
-            } else if (value == 'delete') {
-              setState(() {
-                _products.removeAt(index);
-              });
-            }
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit produk'),
-            ),
-            PopupMenuItem(
-              value: 'delete',
-              child: Text('Hapus produk'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _deleteProduct(_ProductItem product, int index) async {
+    // Kalau belum punya productId (produk lokal aja), hapus dari list saja
+    if (product.productId == null) {
+      setState(() {
+        _products.removeAt(index);
+      });
+      return;
+    }
+
+    final res = await ProductService.deleteProduct(product.productId!);
+
+    if (!mounted) return;
+
+    if (res['success'] == true) {
+      setState(() {
+        _products.removeAt(index);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res['message'] ?? 'Produk berhasil dihapus.',
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res['message'] ?? 'Gagal menghapus produk dari server.',
+          ),
+        ),
+      );
+    }
   }
 
   // ================== BOTTOM SHEET: FORM PRODUK ==================
@@ -497,23 +740,77 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                           final stock = int.tryParse(stockText) ?? 0;
 
                           if (editing && product != null && index != null) {
-                            setState(() {
-                              _products[index] = _ProductItem(
+                            // Kalau belum punya productId, edit lokal saja
+                            if (product.productId == null) {
+                              setState(() {
+                                _products[index] = _ProductItem(
+                                  productId: null,
+                                  storeId: product.storeId,
+                                  name: name,
+                                  price: price,
+                                  stock: stock,
+                                  description: desc,
+                                  imagePath:
+                                      pickedImage?.path ?? product.imagePath,
+                                  isBoosted: product.isBoosted,
+                                );
+                              });
+
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Perubahan produk disimpan di aplikasi.'),
+                                ),
+                              );
+                            } else {
+                              final result =
+                                  await ProductService.updateProduct(
+                                productId: product.productId!,
                                 name: name,
+                                description: desc,
                                 price: price,
                                 stock: stock,
-                                description: desc,
-                                imagePath: pickedImage?.path,
+                                categoryId: 1,
                               );
-                            });
 
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Perubahan produk disimpan di aplikasi.'),
-                              ),
-                            );
+                              if (!mounted) return;
+
+                              if (result['success'] == true) {
+                                setState(() {
+                                  _products[index] = _ProductItem(
+                                    productId: product.productId,
+                                    storeId: product.storeId,
+                                    name: name,
+                                    price: price,
+                                    stock: stock,
+                                    description: desc,
+                                    imagePath:
+                                        pickedImage?.path ?? product.imagePath,
+                                    isBoosted: product.isBoosted,
+                                  );
+                                });
+
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ??
+                                          'Perubahan produk berhasil disimpan.',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ??
+                                          'Gagal menyimpan perubahan produk.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
                           } else {
                             final result =
                                 await ProductService.createProduct(
@@ -522,8 +819,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               price: price,
                               stock: stock,
                               categoryId: 1,
-                              // ❌ di sini kita tidak lagi kirim imagePath,
-                              // karena belum didefinisikan di ProductService.
+                              // saat ini image belum dikirim ke backend
                             );
 
                             if (!mounted) return;
@@ -532,11 +828,14 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               setState(() {
                                 _products.add(
                                   _ProductItem(
+                                    productId: result['product_id'] as int?,
+                                    storeId: result['store_id'] as int?,
                                     name: name,
                                     price: price,
                                     stock: stock,
                                     description: desc,
                                     imagePath: pickedImage?.path,
+                                    isBoosted: false,
                                   ),
                                 );
                               });
@@ -612,17 +911,58 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 // ================== MODEL SEDERHANA UNTUK HALAMAN INI SAJA ==================
 
 class _ProductItem {
+  final int? productId;
+  final int? storeId;
   final String name;
   final double price;
   final int stock;
   final String description;
   final String? imagePath;
+  final bool isBoosted; // 🔥 flag boost lokal
 
   _ProductItem({
+    this.productId,
+    this.storeId,
     required this.name,
     required this.price,
     required this.stock,
     required this.description,
     this.imagePath,
+    this.isBoosted = false,
   });
+
+  factory _ProductItem.fromProduct(Product p, {bool isBoosted = false}) {
+    return _ProductItem(
+      productId: p.productId,
+      storeId: p.storeId,
+      name: p.name,
+      price: p.price.toDouble(),
+      stock: p.stock,
+      description: p.description,
+      imagePath: p.imagePath,
+      isBoosted: isBoosted,
+    );
+  }
+
+  _ProductItem copyWith({
+    int? productId,
+    int? storeId,
+    String? name,
+    double? price,
+    int? stock,
+    String? description,
+    String? imagePath,
+    bool? isBoosted,
+  }) {
+    return _ProductItem(
+      productId: productId ?? this.productId,
+      storeId: storeId ?? this.storeId,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      stock: stock ?? this.stock,
+      description: description ?? this.description,
+      imagePath: imagePath ?? this.imagePath,
+      isBoosted: isBoosted ?? this.isBoosted,
+    );
+  }
 }

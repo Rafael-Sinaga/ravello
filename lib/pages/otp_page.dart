@@ -23,7 +23,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       List.generate(6, (index) => FocusNode());
 
   int _remainingSeconds = 60;
-  late Timer _timer;
+  Timer? _timer;
 
   bool _isSending = false;
   bool _isVerifying = false;
@@ -35,11 +35,35 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
   void initState() {
     super.initState();
     _setupOTPListeners();
+    // listener tambahan supaya AnimatedContainer ikut update saat fokus berubah
+    for (final node in _otpFocusNodes) {
+      node.addListener(() {
+        if (mounted) setState(() {});
+      });
+    }
     _startTimer();
     _sendOTP();
   }
 
+  // === HELPER UNTUK BERSIHKAN PESAN ERROR ===
+  String _sanitizeMessage(dynamic raw, {String fallback = 'Terjadi kesalahan pada server. Coba lagi nanti.'}) {
+    String msg = (raw ?? '').toString();
+
+    // Kalau pesan berisi HTML / DOCTYPE, jangan tampilkan mentah-mentah
+    if (msg.contains('<!DOCTYPE') || msg.contains('<html') || msg.length > 300) {
+      return fallback;
+    }
+
+    // Kalau pesan FormatException JSON jelek
+    if (msg.contains('FormatException')) {
+      return fallback;
+    }
+
+    return msg.isEmpty ? fallback : msg;
+  }
+
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         setState(() => _remainingSeconds--);
@@ -57,20 +81,20 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     try {
       final res = await AuthService.sendOtp(widget.phoneNumber);
 
-      if (res['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['message'] ?? 'Gagal mengirim OTP')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              res['message'] ?? 'Kode OTP telah dikirim.',
-            ),
-            backgroundColor: _primaryColor,
-          ),
-        );
-      }
+      final bool success = res['success'] == true;
+      final String message = _sanitizeMessage(
+        res['message'],
+        fallback: success
+            ? 'Kode OTP telah dikirim.'
+            : 'Gagal mengirim OTP. Coba lagi beberapa saat.',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: success ? _primaryColor : Colors.red,
+        ),
+      );
     } on TimeoutException {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -80,10 +104,16 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
         ),
       );
     } catch (e) {
-      // jaga-jaga kalau terjadi FormatException / error koneksi lain
+      // Jangan tampilkan <!DOCTYPE ...> ke user
+      final String message = _sanitizeMessage(
+        e,
+        fallback:
+            'Terjadi kesalahan koneksi ke server. Silakan coba lagi beberapa saat.',
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Kesalahan koneksi: $e'),
+          content: Text(message),
           backgroundColor: Colors.red,
         ),
       );
@@ -148,13 +178,18 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       if (!mounted) return;
       Navigator.of(context).pop(); // tutup dialog
 
-      if (result['success']) {
+      final bool success = result['success'] == true;
+
+      if (success) {
+        final String message = _sanitizeMessage(
+          result['message'],
+          fallback: 'Akun berhasil didaftarkan dan sudah aktif.',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              result['message'] ?? 'Akun berhasil didaftarkan. Silakan login.',
-            ),
-            backgroundColor: const Color(0xFF16A34A),
+            content: Text(message),
+            backgroundColor: const Color(0xFF16A34A), // hijau sukses
           ),
         );
 
@@ -163,9 +198,14 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
           MaterialPageRoute(builder: (_) => const LoginPage()),
         );
       } else {
+        final String message = _sanitizeMessage(
+          result['message'],
+          fallback: 'Verifikasi gagal. Coba lagi beberapa saat.',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Verifikasi gagal'),
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
@@ -184,9 +224,16 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop(); // tutup dialog
+
+        final String message = _sanitizeMessage(
+          e,
+          fallback:
+              'Terjadi kesalahan koneksi ke server. Silakan coba lagi beberapa saat.',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Terjadi kesalahan koneksi: $e'),
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
@@ -208,7 +255,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     for (var c in _otpControllers) {
       c.dispose();
     }
@@ -324,7 +371,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                 child: Column(
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) {
                         return _buildOtpBox(index);
                       }),
@@ -410,8 +457,8 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(
-                                      Colors.white),
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
                                 ),
                               )
                             : const Text(
@@ -460,7 +507,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(horizontal: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       width: 56,
       height: 64,
       decoration: BoxDecoration(

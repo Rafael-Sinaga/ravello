@@ -26,7 +26,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
   String storeName = 'Nama Toko';
   String storeDescription = 'Toko terpercaya di Ravello';
   String? _profileImagePath; // foto profil user (tetap ada, tapi tidak dipakai untuk toko)
-  String? storeImagePath;   // foto toko
+  String? storeImagePath; // foto toko
 
   @override
   void initState() {
@@ -61,6 +61,133 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
     if (result == true) {
       await _loadStoreInfo(); // reload nama, deskripsi, dan foto toko
     }
+  }
+
+  // ===================== BOOST PRODUK (UI DUMMY) =====================
+  void _openBoostBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.55,
+          minChildSize: 0.4,
+          maxChildSize: 0.8,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                color: Colors.white,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1D5DB),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    'Boost Produk',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Fitur ini akan membantu produkmu tampil lebih atas dan lebih sering dilihat pembeli. '
+                    'Saat ini masih tahap uji coba (dummy) dan belum terhubung ke backend.',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      color: Color(0xFF6F7A74),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        _BoostPackageCard(
+                          title: 'Boost Harian',
+                          subtitle:
+                              'Naikkan visibilitas produk selama 24 jam. Cocok untuk promo singkat atau stok terbatas.',
+                          badgeText: 'Rekomendasi',
+                          icon: Icons.flash_on_rounded,
+                        ),
+                        const SizedBox(height: 10),
+                        _BoostPackageCard(
+                          title: 'Boost Mingguan',
+                          subtitle:
+                              'Produk tampil lebih menonjol selama 7 hari. Ideal untuk campaign yang lebih panjang.',
+                          badgeText: 'Stabil',
+                          icon: Icons.trending_up_rounded,
+                        ),
+                        const SizedBox(height: 10),
+                        _BoostPackageCard(
+                          title: 'Boost Custom',
+                          subtitle:
+                              'Atur sendiri durasi dan intensitas boost (akan aktif saat backend siap).',
+                          badgeText: 'Segera Hadir',
+                          icon: Icons.tune_rounded,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Simulasi boost aktif. Integrasi penuh akan dibuat setelah backend siap.',
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        minimumSize: const Size.fromHeight(46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Coba Boost (Dummy)',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -419,6 +546,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
               ),
               const SizedBox(height: 12),
 
+              // Kelola Produk
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -456,6 +584,71 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
               const SizedBox(height: 10),
 
+              // Boost Produk (UI estetik, dummy)
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF1C6BA4),
+                      Color(0xFF124170),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.10),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    minimumSize: const Size(double.infinity, 54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  onPressed: _openBoostBottomSheet,
+                  icon: const Icon(
+                    Icons.rocket_launch_rounded,
+                    color: Colors.white,
+                  ),
+                  label: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Boost Produk',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Buat produkmu tampil lebih menonjol (dummy, belum terhubung backend)',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFFE5EDF6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Lihat Transaksi
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -671,7 +864,7 @@ class _SalesLineChartState extends State<SalesLineChart> {
       builder: (context, constraints) {
         final selectedIndex =
             _selectedIndex ??
-                (widget.data.isNotEmpty ? widget.data.length - 1 : 0);
+            (widget.data.isNotEmpty ? widget.data.length - 1 : 0);
         final selectedValue =
             widget.data.isNotEmpty ? widget.data[selectedIndex].toInt() : 0;
         final selectedLabel =
@@ -863,5 +1056,111 @@ class _SalesLineChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _SalesLineChartPainter oldDelegate) {
     return oldDelegate.data != data ||
         oldDelegate.selectedIndex != selectedIndex;
+  }
+}
+
+// ===================== CARD BOOST PACKAGE (UI) =====================
+
+class _BoostPackageCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final IconData icon;
+
+  const _BoostPackageCard({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF124170);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E7FF)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5EDFF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              icon,
+              color: primaryColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDBEAFE),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF1D4ED8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    color: Color(0xFF6B7280),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

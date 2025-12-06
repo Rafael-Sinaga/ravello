@@ -36,6 +36,9 @@ class Product {
   /// ID toko (kalau datang dari backend)
   final int? storeId;
 
+  /// Status produk di-boost atau tidak (lokal/backend)
+  final bool isBoosted;
+
   /// Convenience getter, kalau lu mau nama yang lebih “web-ish”
   String get imageUrl => imagePath;
 
@@ -50,6 +53,7 @@ class Product {
     required this.imagePath,
     this.storeName,
     this.storeId,
+    this.isBoosted = false,
   });
 
   /// Factory untuk parse dari JSON backend
@@ -65,6 +69,9 @@ class Product {
   /// - image_url  (URL penuh atau path relatif)
   /// - store_name
   /// - store_id
+  /// - is_boosted / boosted / isBoosted (opsional)
+  /// atau kadang:
+  /// - store: { id / store_id, name / store_name }
   factory Product.fromJson(Map<String, dynamic> json) {
     int? _asInt(dynamic v) {
       if (v == null) return null;
@@ -80,6 +87,14 @@ class Product {
       return double.tryParse(v.toString());
     }
 
+    bool _asBool(dynamic v) {
+      if (v == null) return false;
+      if (v is bool) return v;
+      if (v is num) return v != 0;
+      final s = v.toString().toLowerCase().trim();
+      return s == 'true' || s == '1' || s == 'yes';
+    }
+
     final rawImage =
         (json['image_url'] ?? json['imagePath'] ?? json['image'] ?? '').toString();
 
@@ -88,20 +103,33 @@ class Product {
         ? 'https://via.placeholder.com/300x300?text=No+Image'
         : rawImage;
 
+    // --- dukung format nested: { store: { id / store_id, name / store_name } } ---
+    String? nestedStoreName;
+    int? nestedStoreId;
+    final storeJson = json['store'];
+    if (storeJson is Map<String, dynamic>) {
+      final sName = storeJson['store_name'] ?? storeJson['name'];
+      nestedStoreName = sName?.toString();
+      nestedStoreId = _asInt(storeJson['store_id'] ?? storeJson['id']);
+    }
+
+    final bool boostedFlag = _asBool(
+      json['is_boosted'] ?? json['boosted'] ?? json['isBoosted'],
+    );
+
     return Product(
       productId: _asInt(json['product_id']),
       name: (json['product_name'] ?? json['name'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
-
       // price dikonversi pakai helper, aman kalau "90000" (String)
       price: _asDouble(json['price']) ?? 0,
-
       stock: _asInt(json['stock']) ?? 0,
       discount: _asDouble(json['discount']),
       categoryId: _asInt(json['category_id']),
       imagePath: resolvedImage,
-      storeName: json['store_name']?.toString(),
-      storeId: _asInt(json['store_id']),
+      storeName: nestedStoreName ?? json['store_name']?.toString(),
+      storeId: nestedStoreId ?? _asInt(json['store_id']),
+      isBoosted: boostedFlag,
     );
   }
 
@@ -117,6 +145,7 @@ class Product {
       'image_url': imagePath,
       'store_name': storeName,
       'store_id': storeId,
+      'is_boosted': isBoosted,
     };
   }
 }

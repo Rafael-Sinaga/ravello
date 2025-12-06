@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product_model.dart';
 import '../pages/detail_product.dart';
@@ -32,6 +33,9 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingProducts = true;
   String? _productError;
 
+  // ===== daftar produk yang di-boost (id dari SharedPreferences) =====
+  Set<int> _boostedProductIds = {};
+
   // ===== controller search =====
   final TextEditingController _searchController = TextEditingController();
 
@@ -55,6 +59,26 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  String _mapProductError(Object error) {
+    final msg = error.toString();
+
+    final lower = msg.toLowerCase();
+    if (lower.contains('timeout')) {
+      return 'Koneksi ke server lambat. Coba lagi beberapa saat.';
+    }
+
+    if (msg.contains('Status: 404')) {
+      return 'Produk belum tersedia atau endpoint produk tidak ditemukan (404).';
+    }
+
+    if (lower.contains('bukan json valid') ||
+        lower.contains('html') && lower.contains('server')) {
+      return 'Data produk dari server tidak dapat dibaca. Coba lagi beberapa saat.';
+    }
+
+    return 'Gagal memuat produk. Coba lagi beberapa saat.';
+  }
+
   Future<void> _loadProducts() async {
     setState(() {
       _isLoadingProducts = true;
@@ -62,16 +86,40 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
+      // ambil semua produk dari backend
       final list = await ProductService.fetchProducts();
+
+      // ambil id produk yang di-boost dari SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final boostedStrings =
+          prefs.getStringList('boosted_product_ids') ?? <String>[];
+      final boostedIds =
+          boostedStrings.map((e) => int.tryParse(e)).whereType<int>().toSet();
+
+      // sort: produk boosted di urutan paling atas
+      list.sort((a, b) {
+        final aBoosted =
+            a.productId != null && boostedIds.contains(a.productId);
+        final bBoosted =
+            b.productId != null && boostedIds.contains(b.productId);
+
+        if (aBoosted == bBoosted) return 0;
+        return aBoosted ? -1 : 1; // true duluan
+      });
+
       if (!mounted) return;
       setState(() {
         _products = list;
+        _boostedProductIds = boostedIds;
         _isLoadingProducts = false;
       });
+
+      // debug dikit kalau mau lihat
+      // print('BOOSTED IDs: $_boostedProductIds');
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _productError = 'Gagal memuat produk: $e';
+        _productError = _mapProductError(e);
         _isLoadingProducts = false;
       });
     }
@@ -490,6 +538,9 @@ class _HomePageState extends State<HomePage> {
                                 (product.price * (product.discount! / 100))
                             : product.price;
 
+                        final bool isBoosted = product.productId != null &&
+                            _boostedProductIds.contains(product.productId);
+
                         return GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -500,177 +551,230 @@ class _HomePageState extends State<HomePage> {
                               ),
                             );
                           },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Hero(
-                                  tag: product.imagePath,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(14),
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    child: product.imagePath
-                                            .toString()
-                                            .startsWith('http')
-                                        ? Image.network(
-                                            product.imagePath,
-                                            height: 90,
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                            filterQuality:
-                                                FilterQuality.medium,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Icon(
-                                              Icons.broken_image,
-                                              size: 40,
-                                            ),
-                                          )
-                                        : Image.asset(
-                                            product.imagePath,
-                                            height: 90,
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                            filterQuality:
-                                                FilterQuality.medium,
-                                          ),
-                                  ),
+                                  ],
                                 ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          product.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                            fontFamily: 'Poppins',
-                                          ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Hero(
+                                      tag: product.imagePath,
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                          top: Radius.circular(14),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Column(
+                                        child: product.imagePath
+                                                .toString()
+                                                .startsWith('http')
+                                            ? Image.network(
+                                                product.imagePath,
+                                                height: 90,
+                                                width: double.infinity,
+                                                fit: BoxFit.contain,
+                                                filterQuality:
+                                                    FilterQuality.medium,
+                                                errorBuilder: (_, __, ___) =>
+                                                    const Icon(
+                                                  Icons.broken_image,
+                                                  size: 40,
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                product.imagePath,
+                                                height: 90,
+                                                width: double.infinity,
+                                                fit: BoxFit.contain,
+                                                filterQuality:
+                                                    FilterQuality.medium,
+                                              ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            if (hasDiscount) ...[
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    'Rp ${_formatPrice(product.price)}',
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey,
-                                                      decoration: TextDecoration
-                                                          .lineThrough,
-                                                      fontFamily: 'Poppins',
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    '-${product.discount!.toStringAsFixed(0)}%',
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.red,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontFamily: 'Poppins',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                            ],
                                             Text(
-                                              'Rp ${_formatPrice(discountedPrice)}',
+                                              product.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF124170),
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
                                                 fontFamily: 'Poppins',
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if (hasDiscount) ...[
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        'Rp ${_formatPrice(product.price)}',
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey,
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
+                                                          fontFamily:
+                                                              'Poppins',
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        '-${product.discount!.toStringAsFixed(0)}%',
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.red,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontFamily:
+                                                              'Poppins',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                ],
+                                                Text(
+                                                  'Rp ${_formatPrice(discountedPrice)}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF124170),
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'Poppins',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: OutlinedButton.icon(
+                                                onPressed: () {
+                                                  cart.addToCart(product);
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        '${product.name} ditambahkan ke keranjang',
+                                                        style: const TextStyle(
+                                                            fontFamily:
+                                                                'Poppins'),
+                                                      ),
+                                                      backgroundColor:
+                                                          const Color(
+                                                              0xFF124170),
+                                                      action: SnackBarAction(
+                                                        label: 'Lihat',
+                                                        textColor: Colors.white,
+                                                        onPressed: () {
+                                                          Navigator.pushNamed(
+                                                              context,
+                                                              '/cart');
+                                                        },
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                style:
+                                                    OutlinedButton.styleFrom(
+                                                  side: const BorderSide(
+                                                      color:
+                                                          Color(0xFF124170)),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 6,
+                                                      horizontal: 8),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.shopping_bag_outlined,
+                                                  size: 14,
+                                                  color: Color(0xFF124170),
+                                                ),
+                                                label: const Text(
+                                                  'Tambah',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontFamily: 'Poppins',
+                                                    color: Color(0xFF124170),
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 8),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: OutlinedButton.icon(
-                                            onPressed: () {
-                                              cart.addToCart(product);
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    '${product.name} ditambahkan ke keranjang',
-                                                    style: const TextStyle(
-                                                        fontFamily: 'Poppins'),
-                                                  ),
-                                                  backgroundColor:
-                                                      const Color(0xFF124170),
-                                                  action: SnackBarAction(
-                                                    label: 'Lihat',
-                                                    textColor: Colors.white,
-                                                    onPressed: () {
-                                                      Navigator.pushNamed(
-                                                          context, '/cart');
-                                                    },
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            style: OutlinedButton.styleFrom(
-                                              side: const BorderSide(
-                                                  color: Color(0xFF124170)),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 6,
-                                                      horizontal: 8),
-                                            ),
-                                            icon: const Icon(
-                                              Icons.shopping_bag_outlined,
-                                              size: 14,
-                                              color: Color(0xFF124170),
-                                            ),
-                                            label: const Text(
-                                              'Tambah',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontFamily: 'Poppins',
-                                                color: Color(0xFF124170),
-                                              ),
-                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // BADGE BOOST
+                              if (isBoosted)
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: Colors.orange.shade400,
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(
+                                          Icons.local_fire_department_rounded,
+                                          size: 12,
+                                          color: Colors.deepOrange,
+                                        ),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'Boosted',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.deepOrange,
+                                            fontFamily: 'Poppins',
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
                         );
                       },
