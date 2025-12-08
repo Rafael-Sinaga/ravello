@@ -162,7 +162,46 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         address: storeAddressController.text.trim(),
       );
 
+      final String message =
+          (result['message'] ?? '').toString().toLowerCase();
+
+      // ==================================================
+      // 1) KASUS GAGAL / ERROR (INCLUDING SUDAH PUNYA TOKO)
+      // ==================================================
       if (result['success'] != true) {
+        final alreadySeller =
+            message.contains('hanya diperbolehkan mendaftar satu toko') ||
+            message.contains('sudah memiliki toko') ||
+            message.contains('sudah terdaftar sebagai penjual');
+
+        if (alreadySeller) {
+          // >>> DI SINI KUNCI: force tandai user sebagai seller secara lokal
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isSeller', true);
+          await AuthService.setSellerStatus(true);
+
+          if (!mounted) return;
+          setState(() => isLoading = false);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result['message'] ??
+                    'Akun Anda sudah terdaftar sebagai penjual.',
+              ),
+            ),
+          );
+
+          // langsung ke dashboard penjual
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SellerDashboardPage(),
+            ),
+          );
+          return;
+        }
+
         if (!mounted) return;
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +214,10 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         return;
       }
 
-      // ====== JIKA SUKSES, SIMPAN LOKAL & UPDATE STATUS SELLER ======
+      // ==========================
+      // 2) KASUS SUKSES NORMAL
+      // ==========================
+
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setString('storeName', nameController.text.trim());
@@ -195,8 +237,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         await prefs.setInt('storeId', storeId);
       }
 
-      // 👉 anggap di titik ini backend sudah promote user jadi seller
-      //    dan kita sinkronkan status seller di AuthService (termasuk mirror lokal)
+      // tandai sebagai seller (local + AuthService)
+      await prefs.setBool('isSeller', true);
       await AuthService.setSellerStatus(true);
 
       if (!mounted) return;
