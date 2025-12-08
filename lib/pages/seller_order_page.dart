@@ -199,13 +199,19 @@ class _SellerOrderPageState extends State<SellerOrderPage> {
                       return GestureDetector(
                         onTap: () {
                           Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  SellerOrderPageDetail(order: order),
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SellerOrderPageDetail(
+                              order: order,
+                              onUpdateStatus: (nextStatus) {
+                                // di sini kamu update state / provider / kirim ke backend
+                                // lalu juga bisa buat notifikasi baru untuk buyer & seller
+                              },
                             ),
-                          );
-                        },
+                          ),
+                        );
+
+                      },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),

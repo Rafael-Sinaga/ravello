@@ -168,8 +168,9 @@ class _HomePageState extends State<HomePage> {
     final cart = Provider.of<CartProvider>(context, listen: false);
 
     final hasPendingOrders = orderProvider.orders.any(
-      (p) => orderProvider.getStatus(p) != 'Selesai',
-    );
+  (o) => o.status != 'Selesai',
+);
+
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5FB),

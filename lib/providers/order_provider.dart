@@ -1,69 +1,68 @@
-// lib/providers/order_provider.dart
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/product_model.dart';
+import '../models/app_order.dart';
 
-class OrderProvider extends ChangeNotifier {
-  final List<_OrderStatus> _orders = [];
+class OrderProvider with ChangeNotifier {
+  final List<AppOrder> _orders = [];
 
-  /// List produk saja (dipakai di UI seperti OrderPage)
-  List<Product> get orders => _orders.map((o) => o.product).toList();
+  List<AppOrder> get orders => List.unmodifiable(_orders);
 
-  /// Ambil status untuk 1 produk
-  String getStatus(Product product) {
-    final order = _orders.firstWhere(
-      (o) => o.product == product,
-      orElse: () => _OrderStatus(product, 'Diproses'),
-    );
-    return order.status;
-  }
-
-  /// ✅ Tambah satu order saja (dipanggil dari CheckoutPage)
+  // Dipanggil dari Checkout ketika user konfirmasi
   void addOrder(Product product) {
-    final existing = _orders.any((o) => o.product == product);
-    if (!existing) {
-      final orderStatus = _OrderStatus(product, 'Diproses');
-      _orders.add(orderStatus);
-      _startStatusTimer(orderStatus);
-      notifyListeners();
-    }
-  }
-
-  /// Tambah banyak product sekaligus (kalau mau dipakai di masa depan)
-  void addOrders(List<Product> products) {
-    for (var product in products) {
-      final existing = _orders.any((o) => o.product == product);
-      if (!existing) {
-        final orderStatus = _OrderStatus(product, 'Diproses');
-        _orders.add(orderStatus);
-        _startStatusTimer(orderStatus);
-      }
-    }
+    final newOrder = AppOrder(
+      id: 'INV-${DateTime.now().millisecondsSinceEpoch}',
+      product: product,
+      status: OrderStatus.belumBayar,
+      createdAt: DateTime.now(),
+    );
+    _orders.add(newOrder);
     notifyListeners();
   }
 
-  void clearOrders() {
-    _orders.clear();
+  // Helper kalau kamu mau update berdasarkan id dari backend nanti
+  void updateStatusById(String id, OrderStatus newStatus) {
+    final idx = _orders.indexWhere((o) => o.id == id);
+    if (idx == -1) return;
+    _orders[idx] = _orders[idx].copyWith(status: newStatus);
     notifyListeners();
   }
 
-  void _startStatusTimer(_OrderStatus order) {
-    // Timer simulasi perubahan status otomatis
-    Timer(const Duration(seconds: 5), () {
-      order.status = 'Sedang dikirim';
-      notifyListeners();
-
-      Timer(const Duration(seconds: 5), () {
-        order.status = 'Selesai';
-        notifyListeners();
-      });
-    });
+  // Versi simpel: update dengan objeknya langsung
+  void updateStatus(AppOrder order, OrderStatus newStatus) {
+    final idx = _orders.indexOf(order);
+    if (idx == -1) return;
+    _orders[idx] = _orders[idx].copyWith(status: newStatus);
+    notifyListeners();
   }
-}
 
-class _OrderStatus {
-  final Product product;
-  String status;
+  // Untuk filter di Tab/tab penjual
+  List<AppOrder> byStatus(OrderStatus status) {
+    return _orders.where((o) => o.status == status).toList();
+  }
 
-  _OrderStatus(this.product, this.status);
+  // --- kompatibilitas lama ke NotificationPage lama ---
+
+  String statusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.belumBayar:
+        return 'Belum Bayar';
+      case OrderStatus.diproses:
+        return 'Diproses';
+      case OrderStatus.dikirim:
+        return 'Dikirim';
+      case OrderStatus.diterima:
+        return 'Diterima';
+      case OrderStatus.selesai:
+        return 'Selesai';
+    }
+  }
+
+  // kalau masih ada yang manggil getStatus(product)
+  String getStatus(Product product) {
+    final order =
+        _orders.firstWhere((o) => o.product == product, orElse: () => 
+          AppOrder(id: '', product: product, status: OrderStatus.belumBayar, createdAt: DateTime.now()),
+        );
+    return statusText(order.status);
+  }
 }

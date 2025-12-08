@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/product_model.dart';
-import '../providers/order_provider.dart';
+import '../models/app_order.dart'; // <-- pakai AppOrder, bukan Product
 
 class NotificationPage extends StatelessWidget {
-  final List<Product> orders;
+  final List<AppOrder> orders;
 
   const NotificationPage({
     super.key,
@@ -13,8 +11,6 @@ class NotificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orderProvider = Provider.of<OrderProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -47,18 +43,16 @@ class NotificationPage extends StatelessWidget {
           : ListView.builder(
               itemCount: orders.length,
               itemBuilder: (context, index) {
-                final product = orders[index];
-                final status = orderProvider.getStatus(product);
+                final order = orders[index];
+                final product = order.product; // asumsi AppOrder punya field `product`
+                final status = order.status;    // dan field `status`
 
                 return ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: Image.asset(
-                    product.imagePath,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
+                  leading: _buildProductImage(product.imagePath),
                   title: Text(
                     product.name,
                     style: const TextStyle(
@@ -81,12 +75,36 @@ class NotificationPage extends StatelessWidget {
                     status == 'Selesai'
                         ? Icons.check_circle
                         : Icons.local_shipping,
-                    color:
-                        status == 'Selesai' ? Colors.green : Colors.orangeAccent,
+                    color: status == 'Selesai'
+                        ? Colors.green
+                        : Colors.orangeAccent,
                   ),
                 );
               },
             ),
+    );
+  }
+
+  /// kecil: supaya URL/network & asset sama-sama aman
+  Widget _buildProductImage(String path) {
+    final isNetwork = path.startsWith('http');
+    final image = isNetwork
+        ? Image.network(
+            path,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+          )
+        : Image.asset(
+            path,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+          );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: image,
     );
   }
 }

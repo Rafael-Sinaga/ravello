@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/order_provider.dart';
-import '../models/product_model.dart';
+import '../models/app_order.dart'; // <-- pakai AppOrder, bukan Product
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -17,7 +17,8 @@ class _OrderPageState extends State<OrderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final orders = Provider.of<OrderProvider>(context).orders;
+    final orderProvider = Provider.of<OrderProvider>(context);
+    final orders = orderProvider.orders; // List<AppOrder>
 
     return DefaultTabController(
       length: 4,
@@ -80,7 +81,7 @@ class _OrderPageState extends State<OrderPage> {
             _buildEmptyState(
               message: 'Belum ada pesanan yang diterima',
             ),
-            // Selesai -> semua order yang ada sekarang
+            // Selesai
             _buildOrderList(orders),
           ],
         ),
@@ -90,10 +91,15 @@ class _OrderPageState extends State<OrderPage> {
 
   // ================== TAB "BELUM BAYAR" ==================
 
-  Widget _buildUnpaidTab(List<Product> orders) {
+  Widget _buildUnpaidTab(List<AppOrder> orders) {
+    // hanya ambil yang statusnya Belum Bayar
+    final unpaid = orders
+        .where((o) => o.status == OrderStatus.belumBayar)
+        .toList();
+
     return Column(
       children: [
-        // KARTU ALAMAT PENGIRIMAN (UI saja, tanpa tombol ubah alamat)
+        // KARTU ALAMAT PENGIRIMAN (UI saja)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Container(
@@ -150,23 +156,23 @@ class _OrderPageState extends State<OrderPage> {
                     ],
                   ),
                 ),
-                // Tombol "Ubah" dan SnackBar dihapus sesuai permintaan
               ],
             ),
           ),
         ),
 
         Expanded(
-          child: orders.isEmpty
+          child: unpaid.isEmpty
               ? _buildEmptyState(
                   message: 'Belum ada pesanan menunggu pembayaran',
                 )
               : ListView.builder(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: orders.length,
+                  itemCount: unpaid.length,
                   itemBuilder: (context, index) {
-                    final order = orders[index];
+                    final order = unpaid[index];
+                    final product = order.product;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -225,7 +231,7 @@ class _OrderPageState extends State<OrderPage> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: Image.asset(
-                                    order.imagePath,
+                                    product.imagePath,
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,
@@ -258,7 +264,7 @@ class _OrderPageState extends State<OrderPage> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Rp${order.price.toStringAsFixed(0)}',
+                                  'Rp${product.price.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -276,7 +282,7 @@ class _OrderPageState extends State<OrderPage> {
         ),
 
         // BAR KONFIRMASI PEMBAYARAN (tanpa slider)
-        if (orders.isNotEmpty) _buildPaymentConfirmationBar(context),
+        if (unpaid.isNotEmpty) _buildPaymentConfirmationBar(context),
       ],
     );
   }
@@ -419,7 +425,7 @@ class _OrderPageState extends State<OrderPage> {
               ),
               const SizedBox(height: 16),
 
-              // Placeholder preview bukti (nanti lu sambung sama file / image)
+              // Placeholder preview bukti
               Container(
                 width: double.infinity,
                 height: 140,
@@ -489,11 +495,7 @@ class _OrderPageState extends State<OrderPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // TODO:
-                    // 1. Validasi sudah ada gambar
-                    // 2. Upload ke server / simpan lokal
-                    // 3. Update status pesanan jadi "Menunggu Verifikasi" / "Diproses"
-                    // 4. Tutup sheet + kasih feedback
+                    // TODO: validasi & upload bukti
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -533,8 +535,13 @@ class _OrderPageState extends State<OrderPage> {
 
   // ================== LIST PESANAN (TAB "SELESAI") ==================
 
-  Widget _buildOrderList(List<Product> orders) {
-    if (orders.isEmpty) {
+  Widget _buildOrderList(List<AppOrder> orders) {
+    // hanya order dengan status Selesai
+    final done = orders
+        .where((o) => o.status == OrderStatus.selesai)
+        .toList();
+
+    if (done.isEmpty) {
       return _buildEmptyState(
         message: 'Belum ada pesanan yang selesai',
       );
@@ -542,9 +549,10 @@ class _OrderPageState extends State<OrderPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: orders.length,
+      itemCount: done.length,
       itemBuilder: (context, index) {
-        final order = orders[index];
+        final order = done[index];
+        final product = order.product;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -631,7 +639,7 @@ class _OrderPageState extends State<OrderPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: Image.asset(
-                        order.imagePath,
+                        product.imagePath,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
@@ -666,7 +674,7 @@ class _OrderPageState extends State<OrderPage> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Rp${order.price.toStringAsFixed(0)}',
+                      'Rp${product.price.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

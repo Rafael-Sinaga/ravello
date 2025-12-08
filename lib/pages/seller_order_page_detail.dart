@@ -45,7 +45,15 @@ class SellerOrderPageDetail extends StatelessWidget {
 
   final SellerOrder order;
 
-  const SellerOrderPageDetail({super.key, required this.order});
+  /// NEW: callback ke parent untuk update status
+  /// misal: onUpdateStatus('Dikirim');
+  final ValueChanged<String>? onUpdateStatus;
+
+  const SellerOrderPageDetail({
+    super.key,
+    required this.order,
+    this.onUpdateStatus,
+  });
 
   String _formatDate(DateTime dt) {
     // format simpel: 12 Okt 2025, 14:32
@@ -91,6 +99,45 @@ class SellerOrderPageDetail extends StatelessWidget {
     }
   }
 
+  /// NEW: status berikutnya berdasarkan status sekarang
+  String? _nextStatus(String status) {
+    switch (status) {
+      case 'Baru':
+        return 'Diproses';
+      case 'Diproses':
+        return 'Dikirim';
+      case 'Dikirim':
+        return 'Selesai';
+      default:
+        // 'Selesai' atau status lain -> tidak ada lanjutan
+        return null;
+    }
+  }
+
+  /// NEW: label tombol berdasarkan status sekarang
+  String _actionLabel(String status) {
+    switch (status) {
+      case 'Baru':
+        return 'Terima & Proses';
+      case 'Diproses':
+        return 'Tandai Dikirim';
+      case 'Dikirim':
+        return 'Tandai Selesai';
+      case 'Selesai':
+        return 'Pesanan Selesai';
+      default:
+        return 'Proses Pesanan';
+    }
+  }
+
+  /// NEW: deskripsi singkat yang ditampilkan di dialog konfirmasi
+  String _actionDescription(String currentStatus, String? nextStatus) {
+    if (nextStatus == null) {
+      return 'Pesanan sudah berada pada status akhir.';
+    }
+    return 'Ubah status pesanan dari "$currentStatus" menjadi "$nextStatus"?';
+  }
+
   @override
   Widget build(BuildContext context) {
     final subtotal = order.items.fold<int>(
@@ -99,6 +146,13 @@ class SellerOrderPageDetail extends StatelessWidget {
     );
     const int serviceFee = 2000;
     final int total = subtotal + serviceFee;
+
+    // NEW: hitung status berikut & label tombol sekali di sini
+    final String? nextStatus = _nextStatus(order.status);
+    final String actionLabel = _actionLabel(order.status);
+
+    final bool isActionEnabled =
+        nextStatus != null && onUpdateStatus != null && order.status != 'Selesai';
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -483,25 +537,62 @@ class SellerOrderPageDetail extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: update status pesanan (misal dari "Baru" ke "Diproses" / "Dikirim")
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Aksi pesanan belum diimplementasi.'),
-                          backgroundColor: primaryColor,
-                        ),
-                      );
-                    },
+                    onPressed: !isActionEnabled
+                        ? null
+                        : () async {
+                            // NEW: dialog konfirmasi sebelum update status
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Ubah Status Pesanan'),
+                                content: Text(
+                                  _actionDescription(order.status, nextStatus),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Batal'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Ya, Lanjutkan'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true &&
+                                nextStatus != null &&
+                                onUpdateStatus != null) {
+                              onUpdateStatus!(nextStatus);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Status pesanan diubah menjadi "$nextStatus".',
+                                  ),
+                                  backgroundColor: primaryColor,
+                                ),
+                              );
+
+                              // Opsional: kembali ke halaman sebelumnya
+                              Navigator.pop(context);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
+                      disabledBackgroundColor:
+                          primaryColor.withOpacity(0.35),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Proses Pesanan',
-                      style: TextStyle(
+                    child: Text(
+                      actionLabel,
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
