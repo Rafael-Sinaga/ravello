@@ -73,37 +73,51 @@ class AuthService {
         final dynamic mailRaw =
             userJson['email'] ?? root['email'] ?? body['email'] ?? '';
 
-        // 🎯 isSeller murni dari backend
-        final bool isSellerFlag =
+        // 🎯 isSeller dari backend (bisa saja belum akurat)
+        final bool backendSeller =
             (userJson['isSeller'] ??
                         root['isSeller'] ??
                         body['isSeller'] ??
                         false) ==
                     true;
 
+        final prefs = await SharedPreferences.getInstance();
+
+        // 🔁 baca status lokal lama (mis: user sudah punya toko, tapi backend belum update flag)
+        final bool localSeller =
+            prefs.getBool('isSeller') ??
+            prefs.getBool('isSeller_local') ??
+            false;
+
+        // 🔁 kalau user sudah punya storeId, anggap seller
+        final int? storedStoreId = prefs.getInt('storeId');
+        final bool hasStore = storedStoreId != null && storedStoreId > 0;
+
+        // ✅ status final = backend OR lokal OR punya toko
+        final bool effectiveSeller = backendSeller || localSeller || hasStore;
+
+        // buat user model pakai status final
         currentUser = UserModel(
           id: int.tryParse(idRaw.toString()) ?? 0,
           name: nameRaw.toString(),
           email: mailRaw.toString(),
-          isSeller: isSellerFlag,
+          isSeller: effectiveSeller,
         );
-
-        final prefs = await SharedPreferences.getInstance();
 
         print('User login : ${currentUser?.name} | ${currentUser?.email}');
         print('Token JWT  : $token');
-        print('isSeller   : ${currentUser?.isSeller}');
+        print('isSeller   : backend=$backendSeller, '
+            'local=$localSeller, hasStore=$hasStore, '
+            'effective=$effectiveSeller');
 
-        // simpan ke SharedPreferences (mirror dari backend)
+        // simpan ke SharedPreferences (mirror dari status final)
         await prefs.setString('auth_token', token!);
         await prefs.setString('current_user_name', currentUser?.name ?? '');
         await prefs.setString('current_user_email', currentUser?.email ?? '');
         await prefs.setInt('current_user_id', currentUser?.id ?? 0);
 
-        // 🔁 simpan status penjual berbasis backend
-        await prefs.setBool('isSeller', currentUser!.isSeller);
-        // 🔁 mirror ke flag lokal lama (buat kompatibel dengan kode lain yang masih pakai)
-        await prefs.setBool('isSeller_local', currentUser!.isSeller);
+        await prefs.setBool('isSeller', effectiveSeller);
+        await prefs.setBool('isSeller_local', effectiveSeller);
 
         // 🔐 === HANDLE STORE / TOKO PER AKUN ===
         //
@@ -269,12 +283,17 @@ class AuthService {
       if (prefs.containsKey('isSeller')) {
         await prefs.remove('isSeller');
       }
-      // 🔁 bersihkan juga mirror lama
       if (prefs.containsKey('isSeller_local')) {
         await prefs.remove('isSeller_local');
       }
       if (prefs.containsKey('profile_image_path')) {
         await prefs.remove('profile_image_path');
+      }
+      if (prefs.containsKey('storeId')) {
+        await prefs.remove('storeId');
+      }
+      if (prefs.containsKey('storeName')) {
+        await prefs.remove('storeName');
       }
 
       // 🧹 PENTING: hapus storeId & data boost supaya tidak kebawa ke akun lain
@@ -321,9 +340,7 @@ class AuthService {
   static Future<void> setSellerStatus(bool status) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // simpan status utama (mirror backend)
     await prefs.setBool('isSeller', status);
-    // mirror ke flag lama supaya kode lain yang masih pakai tetap sinkron
     await prefs.setBool('isSeller_local', status);
 
     if (currentUser != null) {
@@ -335,27 +352,32 @@ class AuthService {
 
   /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Lihat toko")
   static Future<bool> getSellerStatus() async {
-    // 1️⃣ Sumber utama: currentUser (diisi dari backend saat login / update)
-    if (currentUser != null) {
-      return currentUser!.isSeller;
-    }
-
-    // 2️⃣ Fallback: nilai terakhir yang pernah disimpan
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // prefer kunci baru
-      final bool? stored = prefs.getBool('isSeller');
-      if (stored != null) {
-        return stored;
+      final bool local =
+          prefs.getBool('isSeller') ??
+          prefs.getBool('isSeller_local') ??
+          false;
+      final bool memory = currentUser?.isSeller ?? false;
+
+      final int? storedStoreId = prefs.getInt('storeId');
+      final bool hasStore = storedStoreId != null && storedStoreId > 0;
+
+      final bool result = local || memory || hasStore;
+
+      // sinkronkan kembali ke currentUser bila sudah ada
+      if (currentUser != null) {
+        currentUser!.isSeller = result;
       }
 
-      // fallback ke kunci lama (buat kompatibel)
-      final bool? local = prefs.getBool('isSeller_local');
-      return local ?? false;
+      print('AuthService.getSellerStatus -> '
+          'local=$local, memory=$memory, hasStore=$hasStore, result=$result');
+
+      return result;
     } catch (e) {
       print('AuthService.getSellerStatus error: $e');
-      return false;
+      return currentUser?.isSeller ?? false;
     }
   }
 
