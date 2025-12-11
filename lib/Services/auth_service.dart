@@ -1,28 +1,92 @@
 // lib/services/auth_service.dart
+import 'dart:async';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+
 import '../utils/api_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
+  // default timeout used by other calls (keep original)
   static const Duration _timeoutDuration = Duration(seconds: 10);
+
+  // slightly longer timeout specifically for login to reduce false timeouts
+  static const Duration _loginTimeout = Duration(seconds: 15);
+
   static UserModel? currentUser;
   static String? token;
 
-  /// 🔑 LOGIN
+  /// helper: cek koneksi internet (via connectivity_plus)
+  static Future<bool> _hasNetwork() async {
+    try {
+      final conn = await Connectivity().checkConnectivity();
+      return conn != ConnectivityResult.none;
+    } catch (e) {
+      // jika check gagal, anggap tidak ada koneksi
+      print('Connectivity check failed: $e');
+      return false;
+    }
+  }
+
+  /// helper: post with retry + exponential backoff (used for login)
+  static Future<http.Response> _postWithRetry(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    int maxAttempts = 3,
+    Duration timeout = _loginTimeout,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        final response = await http
+            .post(url, headers: headers, body: body)
+            .timeout(timeout);
+        return response;
+      } on TimeoutException catch (e) {
+        print('POST attempt $attempt timed out: $e');
+        if (attempt >= maxAttempts) rethrow;
+      } on SocketException catch (e) {
+        print('POST attempt $attempt socket error: $e');
+        if (attempt >= maxAttempts) rethrow;
+      } catch (e) {
+        print('POST attempt $attempt failed: $e');
+        // non-network errors: break after max attempts
+        if (attempt >= maxAttempts) rethrow;
+      }
+
+      // exponential backoff: 500ms, 1000ms, 2000ms...
+      await Future.delayed(Duration(milliseconds: 500 * (1 << (attempt - 1))));
+    }
+  }
+
+  /// 🔑 LOGIN (ditingkatkan: cek koneksi, retry, timeout lebih lebar)
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
 
+    // cek koneksi dulu
+    final hasNet = await _hasNetwork();
+    if (!hasNet) {
+      return {
+        'success': false,
+        'message': 'Tidak ada koneksi internet. Periksa jaringanmu.'
+      };
+    }
+
     try {
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'password': password}),
-          )
-          .timeout(_timeoutDuration);
+      // gunakan wrapper dengan retry + timeout agar lebih tahan banting
+      final response = await _postWithRetry(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+        maxAttempts: 3,
+        timeout: _loginTimeout,
+      );
 
       print('LOGIN status: ${response.statusCode}');
       print('LOGIN body  : ${response.body}');
@@ -38,10 +102,7 @@ class AuthService {
 
         // 🎯 coba ambil token dari beberapa field umum
         final String? parsedToken =
-            (root['token'] ??
-                    body['token'] ??
-                    root['access_token'] ??
-                    body['access_token'])
+            (root['token'] ?? body['token'] ?? root['access_token'] ?? body['access_token'])
                 ?.toString();
 
         if (parsedToken == null || parsedToken.isEmpty) {
@@ -63,11 +124,7 @@ class AuthService {
                 : <String, dynamic>{};
 
         final dynamic idRaw =
-            userJson['client_id'] ??
-            userJson['id'] ??
-            root['client_id'] ??
-            root['id'] ??
-            0;
+            userJson['client_id'] ?? userJson['id'] ?? root['client_id'] ?? root['id'] ?? 0;
         final dynamic nameRaw =
             userJson['name'] ?? root['name'] ?? body['name'] ?? '';
         final dynamic mailRaw =
@@ -75,19 +132,13 @@ class AuthService {
 
         // 🎯 isSeller dari backend (bisa saja belum akurat)
         final bool backendSeller =
-            (userJson['isSeller'] ??
-                        root['isSeller'] ??
-                        body['isSeller'] ??
-                        false) ==
-                    true;
+            (userJson['isSeller'] ?? root['isSeller'] ?? body['isSeller'] ?? false) == true;
 
         final prefs = await SharedPreferences.getInstance();
 
         // 🔁 baca status lokal lama (mis: user sudah punya toko, tapi backend belum update flag)
         final bool localSeller =
-            prefs.getBool('isSeller') ??
-            prefs.getBool('isSeller_local') ??
-            false;
+            prefs.getBool('isSeller') ?? prefs.getBool('isSeller_local') ?? false;
 
         // 🔁 kalau user sudah punya storeId, anggap seller
         final int? storedStoreId = prefs.getInt('storeId');
@@ -106,9 +157,7 @@ class AuthService {
 
         print('User login : ${currentUser?.name} | ${currentUser?.email}');
         print('Token JWT  : $token');
-        print('isSeller   : backend=$backendSeller, '
-            'local=$localSeller, hasStore=$hasStore, '
-            'effective=$effectiveSeller');
+        print('isSeller   : backend=$backendSeller, local=$localSeller, hasStore=$hasStore, effective=$effectiveSeller');
 
         // simpan ke SharedPreferences (mirror dari status final)
         await prefs.setString('auth_token', token!);
@@ -135,14 +184,10 @@ class AuthService {
         final storeObj = userJson['store'] ?? root['store'];
 
         if (storeObj is Map<String, dynamic>) {
-          storeId = _asInt(
-            storeObj['store_id'] ?? storeObj['id'],
-          );
+          storeId = _asInt(storeObj['store_id'] ?? storeObj['id']);
         }
 
-        storeId ??= _asInt(
-          userJson['store_id'] ?? root['store_id'] ?? body['store_id'],
-        );
+        storeId ??= _asInt(userJson['store_id'] ?? root['store_id'] ?? body['store_id']);
 
         if (storeId != null) {
           print('LOGIN: storeId untuk user ini = $storeId');
@@ -162,12 +207,19 @@ class AuthService {
           'message': 'Login gagal (${response.statusCode}): ${response.body}',
         };
       }
+    } on TimeoutException catch (e) {
+      print('LOGIN TimeoutException: $e');
+      return {'success': false, 'message': 'Koneksi timeout: server terlalu lambat. Coba lagi.'};
+    } on SocketException catch (e) {
+      print('LOGIN SocketException: $e');
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server. Periksa koneksi internet.'};
     } catch (e) {
+      print('LOGIN error: $e');
       return {'success': false, 'message': 'Terjadi kesalahan koneksi: $e'};
     }
   }
 
-  /// 📝 REGISTER
+  /// 📝 REGISTER (tetap seperti sebelumnya)
   static Future<Map<String, dynamic>> register(
       String name, String email, String password) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/postClient');
@@ -203,7 +255,7 @@ class AuthService {
     }
   }
 
-  /// 📩 KIRIM OTP (berdasarkan email)
+  /// 📩 KIRIM OTP (berdasarkan email) (tetap sama)
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/send-otp');
 
@@ -231,7 +283,7 @@ class AuthService {
     }
   }
 
-  /// ✅ VERIFIKASI OTP (email + kode OTP)
+  /// ✅ VERIFIKASI OTP (email + kode OTP) (tetap sama)
   static Future<Map<String, dynamic>> verifyOtp(
       String email, String otp) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/postClient/verify-otp');
@@ -263,7 +315,7 @@ class AuthService {
     }
   }
 
-  /// 🚪 LOGOUT
+  /// 🚪 LOGOUT (tetap sama)
   static Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -315,7 +367,7 @@ class AuthService {
     }
   }
 
-  /// 🔐 Ambil token dari memori / SharedPreferences
+  /// 🔐 Ambil token dari memori / SharedPreferences (tetap sama)
   static Future<String?> getToken() async {
     if (token != null && token!.isNotEmpty) {
       return token;
@@ -350,15 +402,13 @@ class AuthService {
     print('AuthService.setSellerStatus: $status');
   }
 
-  /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Lihat toko")
+  /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Lihat toko") (tetap sama)
   static Future<bool> getSellerStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
       final bool local =
-          prefs.getBool('isSeller') ??
-          prefs.getBool('isSeller_local') ??
-          false;
+          prefs.getBool('isSeller') ?? prefs.getBool('isSeller_local') ?? false;
       final bool memory = currentUser?.isSeller ?? false;
 
       final int? storedStoreId = prefs.getInt('storeId');
@@ -381,13 +431,13 @@ class AuthService {
     }
   }
 
-  /// 📸 Simpan path foto profil
+  /// 📸 Simpan path foto profil (tetap sama)
   static Future<void> setProfileImagePath(String path) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_image_path', path);
   }
 
-  /// 📸 Ambil path foto profil (nullable)
+  /// 📸 Ambil path foto profil (nullable) (tetap sama)
   static Future<String?> getProfileImagePath() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('profile_image_path');

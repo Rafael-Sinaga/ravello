@@ -24,6 +24,9 @@ dependencies:
   path_provider: ^2.1.3
   shared_preferences: ^2.2.3
 
+  # === Tambahan untuk cek koneksi jaringan ===
+  connectivity_plus: ^4.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
