@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ravello/Services/auth_service.dart';
 import 'package:ravello/pages/login_page.dart'; // Tambahkan import ini
 
 class ResetPasswordPage extends StatefulWidget {
@@ -55,30 +56,38 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 
-  void _resetPassword() {
-    if (_newPasswordController.text.isEmpty) {
-      _showSnackBar('Harap masukkan kata sandi baru');
-      return;
-    }
+  void _resetPassword() async {
+  final newPass = _newPasswordController.text.trim();
+  final confirmPass = _confirmPasswordController.text.trim();
 
-    if (_confirmPasswordController.text.isEmpty) {
-      _showSnackBar('Harap konfirmasi kata sandi baru');
-      return;
-    }
-
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      _showSnackBar('Konfirmasi kata sandi tidak sesuai');
-      return;
-    }
-
-    if (_newPasswordController.text.length < 8) {
-      _showSnackBar('Kata sandi minimal 8 karakter');
-      return;
-    }
-
-    // Jika semua validasi passed, reset password berhasil
-    _showSuccessAndNavigate();
+  if (newPass.isEmpty || confirmPass.isEmpty) {
+    _showSnackBar('Harap isi kedua kolom sandi');
+    return;
   }
+  if (newPass != confirmPass) {
+    _showSnackBar('Konfirmasi kata sandi tidak sesuai');
+    return;
+  }
+  if (newPass.length < 8) {
+    _showSnackBar('Kata sandi minimal 8 karakter');
+    return;
+  }
+
+  setState(() {});
+  _showSnackBar("Mengirim perubahan...");
+
+  final result = await AuthService.resetPassword(
+    ModalRoute.of(context)!.settings.arguments as String? ?? "", // <= email
+    newPass,
+  );
+
+  if (result['success'] == true) {
+    _showSuccessAndNavigate();
+  } else {
+    _showSnackBar(result['message'] ?? 'Gagal menyimpan password');
+  }
+}
+
 
   void _showSuccessAndNavigate() {
     // Tampilkan snackbar sukses

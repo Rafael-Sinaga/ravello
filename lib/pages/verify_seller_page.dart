@@ -162,103 +162,113 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         address: storeAddressController.text.trim(),
       );
 
-      final String message =
-          (result['message'] ?? '').toString().toLowerCase();
+      final prefs = await SharedPreferences.getInstance();
 
-      // ==================================================
-      // 1) KASUS GAGAL / ERROR (INCLUDING SUDAH PUNYA TOKO)
-      // ==================================================
+      // ====== KASUS GAGAL (TERMUKSUD SUDAH PUNYA TOKO) ======
       if (result['success'] != true) {
-        final alreadySeller =
-            message.contains('hanya diperbolehkan mendaftar satu toko') ||
-            message.contains('sudah memiliki toko') ||
-            message.contains('sudah terdaftar sebagai penjual');
+        final String msg = (result['message'] ?? '').toString();
+        final String msgLower = msg.toLowerCase();
+
+        // 🔴 BACKEND BILANG "SUDAH PUNYA TOKO" → ANGGAP SAJA SUDAH SELLER
+        final bool alreadySeller =
+            msgLower.contains('hanya diperbolehkan mendaftar satu toko') ||
+            msgLower.contains('sudah memiliki toko') ||
+            msgLower.contains('already has a store');
 
         if (alreadySeller) {
-          // >>> DI SINI KUNCI: force tandai user sebagai seller secara lokal
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isSeller', true);
-          await AuthService.setSellerStatus(true);
+  final dynamic storeIdDyn =
+      result['store_id'] ?? result['storeId'] ?? result['store_id_existing'];
+  final int? storeId =
+      storeIdDyn == null ? null : int.tryParse(storeIdDyn.toString());
+  if (storeId != null) {
+    await prefs.setInt('storeId', storeId);
+  }
 
-          if (!mounted) return;
-          setState(() => isLoading = false);
+  await AuthService.setSellerStatus(true);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result['message'] ??
-                    'Akun Anda sudah terdaftar sebagai penjual.',
-              ),
-            ),
-          );
+  // 🔥 TARIK PROFIL TOKO DARI DATABASE
+  await AuthService.getStoreProfile();
 
-          // langsung ke dashboard penjual
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SellerDashboardPage(),
-            ),
-          );
-          return;
-        }
+  if (!mounted) return;
+  setState(() => isLoading = false);
 
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        msg.isNotEmpty
+            ? msg
+            : 'Akun kamu sudah terdaftar sebagai penjual.',
+      ),
+    ),
+  );
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const SellerDashboardPage(),
+    ),
+  );
+  return;
+}
+
+        // ❌ error biasa (bukan kasus "sudah punya toko")
         if (!mounted) return;
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result['message'] ?? 'Gagal mendaftar sebagai penjual.',
+              msg.isNotEmpty
+                  ? msg
+                  : 'Gagal mendaftar sebagai penjual.',
             ),
           ),
         );
         return;
       }
 
-      // ==========================
-      // 2) KASUS SUKSES NORMAL
-      // ==========================
+      // ====== KASUS SUKSES NORMAL ======
+      // simpan info dasar ke local (boleh, tapi nanti tetap override oleh DB)
+await prefs.setString('storeName', nameController.text.trim());
+await prefs.setString('storeDescription', storeDescController.text.trim());
+await prefs.setString('storeAddress', storeAddressController.text.trim());
+await prefs.setString('storeBankName', selectedBank ?? '');
+await prefs.setString(
+    'storeBankAccountNumber', bankAccountController.text.trim());
+await prefs.setString(
+    'storeBankAccountHolder', bankHolderController.text.trim());
 
-      final prefs = await SharedPreferences.getInstance();
+// simpan store_id dari backend
+final dynamic storeIdDyn = result['store_id'] ?? result['storeId'];
+final int? storeId =
+    storeIdDyn == null ? null : int.tryParse(storeIdDyn.toString());
+if (storeId != null) {
+  await prefs.setInt('storeId', storeId);
+}
 
-      await prefs.setString('storeName', nameController.text.trim());
-      await prefs.setString('storeBankName', selectedBank ?? '');
-      await prefs.setString(
-          'storeBankAccountNumber', bankAccountController.text.trim());
-      await prefs.setString(
-          'storeBankAccountHolder', bankHolderController.text.trim());
-      await prefs.setString(
-          'storeAddress', storeAddressController.text.trim());
-      await prefs.setString(
-          'storeDescription', storeDescController.text.trim());
+// jadikan user seller
+await AuthService.setSellerStatus(true);
 
-      // simpan store_id kalau dikirim backend
-      final storeId = result['store_id'];
-      if (storeId is int) {
-        await prefs.setInt('storeId', storeId);
-      }
+// 🔥 SETELAH storeId ada → tarik profil toko beneran dari DB
+await AuthService.getStoreProfile();
 
-      // tandai sebagai seller (local + AuthService)
-      await prefs.setBool('isSeller', true);
-      await AuthService.setSellerStatus(true);
+if (!mounted) return;
+setState(() => isLoading = false);
 
-      if (!mounted) return;
-      setState(() => isLoading = false);
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: Text(
+      result['message'] ?? 'Verifikasi berhasil!',
+    ),
+  ),
+);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message'] ?? 'Verifikasi berhasil!',
-          ),
-        ),
-      );
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const SellerDashboardPage(),
+  ),
+);
 
-      // pindah ke dashboard penjual
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SellerDashboardPage(),
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
