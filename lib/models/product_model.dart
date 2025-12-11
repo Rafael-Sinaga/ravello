@@ -1,151 +1,260 @@
 // lib/models/product_model.dart
+// Model Product defensif — mendukung berbagai bentuk JSON dari backend.
+// Menambahkan field yang diperlukan: productId, storeId, name, description,
+// price, discount, imagePath, stock, categoryId, storeName, sizes.
 
-/// Model produk yang kompatibel dengan:
-/// - kode UI lama (name, price, imagePath, discount)
-/// - data dari backend (product_id, product_name, image_url, dll)
+import 'dart:convert';
+
 class Product {
-  /// ID produk dari backend (bisa null kalau produk lokal/dummy)
-  final int? productId;
-
-  /// Nama produk — dipakai di semua UI
-  final String name;
-
-  /// Deskripsi produk (opsional)
-  final String description;
-
-  /// Harga produk
-  final num price;
-
-  /// Stok produk (default 0 kalau nggak diisi)
-  final int stock;
-
-  /// Persentase diskon (0–100), nullable
-  final double? discount;
-
-  /// ID kategori dari backend (opsional)
-  final int? categoryId;
-
-  /// Path gambar yang dipakai UI:
-  /// - bisa path asset lokal: 'assets/images/sepatu.png'
-  /// - bisa URL penuh dari backend: 'http://.../uploads/xxx.png'
-  final String imagePath;
-
-  /// Nama toko (kalau datang dari backend)
-  final String? storeName;
-
-  /// ID toko (kalau datang dari backend)
+  final dynamic productId; // int or String
   final int? storeId;
-
-  /// Status produk di-boost atau tidak (lokal/backend)
-  final bool isBoosted;
-
-  /// Convenience getter, kalau lu mau nama yang lebih “web-ish”
-  String get imageUrl => imagePath;
+  final String name;
+  final String description;
+  final num price;
+  final double? discount;
+  final String imagePath;
+  final int stock;
+  final int? categoryId;
+  final String? storeName;
+  final List<String>? sizes;
 
   Product({
-    this.productId,
-    required this.name,
-    this.description = '',
-    required this.price,
-    this.stock = 0,
-    this.discount,
-    this.categoryId,
-    required this.imagePath,
-    this.storeName,
+    required this.productId,
     this.storeId,
-    this.isBoosted = false,
+    required this.name,
+    required this.description,
+    required this.price,
+    this.discount,
+    required this.imagePath,
+    this.stock = 0,
+    this.categoryId,
+    this.storeName,
+    this.sizes,
   });
 
-  /// Factory untuk parse dari JSON backend
-  ///
-  /// Backend kirim field:
-  /// - product_id
-  /// - product_name
-  /// - description
-  /// - price
-  /// - stock
-  /// - discount (opsional)
-  /// - category_id
-  /// - image_url  (URL penuh atau path relatif)
-  /// - store_name
-  /// - store_id
-  /// - is_boosted / boosted / isBoosted (opsional)
-  /// atau kadang:
-  /// - store: { id / store_id, name / store_name }
+  // --- Helper parsers ---
+  static num _parseNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    if (v is String) {
+      final cleaned = v.replaceAll(',', '').trim();
+      return num.tryParse(cleaned) ?? 0;
+    }
+    return 0;
+  }
+
+  static int _parseInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) {
+      return int.tryParse(v.replaceAll(',', '').trim()) ??
+          (num.tryParse(v) ?? 0).toInt();
+    }
+    return 0;
+  }
+
+  static double? _parseDoubleNullable(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.replaceAll(',', '').trim());
+    return null;
+  }
+
+  /// Parse sizes dari berbagai bentuk:
+  /// - List<String> => langsung
+  /// - List<Map> => ambil field 'size' / 'name' / 'label'
+  /// - String like "S,M,L" => split by comma/semicolon/pipe
+  /// - String like '["S","M"]' => jsonDecode dulu
+  static List<String>? _parseSizes(dynamic raw) {
+    if (raw == null) return null;
+
+    // Jika sudah list
+    if (raw is List) {
+      try {
+        // jika semua elemen string / null
+        if (raw.every((e) => e == null || e is String)) {
+          return raw
+              .map((e) => (e ?? '').toString().trim())
+              .where((s) => s.isNotEmpty)
+              .cast<String>()
+              .toList();
+        }
+
+        // kalau elemen berupa map/object => coba ekstrak field umum
+        final extracted = <String>[];
+        for (final e in raw) {
+          if (e == null) continue;
+          if (e is String) {
+            final s = e.trim();
+            if (s.isNotEmpty) extracted.add(s);
+            continue;
+          }
+          if (e is Map) {
+            final candidates = ['size', 'name', 'label', 'value', 'ukuran'];
+            String? val;
+            for (final k in candidates) {
+              if (e.containsKey(k) && e[k] != null) {
+                val = e[k].toString();
+                break;
+              }
+            }
+            if (val != null && val.trim().isNotEmpty) {
+              extracted.add(val.trim());
+            } else {
+              // fallback: ambil first string-like value
+              try {
+                final firstStringEntry = e.entries.firstWhere(
+                  (ent) => ent.value is String,
+                  orElse: () => const MapEntry('', ''),
+                );
+                if (firstStringEntry.value is String &&
+                    (firstStringEntry.value as String).trim().isNotEmpty) {
+                  extracted.add((firstStringEntry.value as String).trim());
+                }
+              } catch (_) {
+                // ignore
+              }
+            }
+          } else {
+            final s = e.toString().trim();
+            if (s.isNotEmpty) extracted.add(s);
+          }
+        }
+        return extracted.isEmpty ? null : extracted;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Jika string
+    if (raw is String) {
+      final cleaned = raw.trim();
+      if (cleaned.isEmpty) return null;
+
+      // 1) Jika string JSON array -> coba decode
+      if (cleaned.startsWith('[') && cleaned.endsWith(']')) {
+        try {
+          final decoded = jsonDecode(cleaned);
+          if (decoded is List) {
+            return _parseSizes(decoded); // rekursif ke branch List
+          }
+        } catch (_) {
+          // jika gagal decode, fallback ke split biasa di bawah
+        }
+      }
+
+      // 2) Normalisasi delimiter jadi koma lalu split — hindari regex bermasalah
+      final normalized = cleaned.replaceAll('|', ',').replaceAll(';', ',');
+      // hapus kutip kalau ada
+      final cleanedQuotes = normalized.replaceAll('"', '').replaceAll("'", '');
+      final parts = cleanedQuotes
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      return parts.isEmpty ? null : parts;
+    }
+
+    // other types: fallback to string
+    try {
+      final s = raw.toString().trim();
+      if (s.isEmpty) return null;
+      final normalized = s.replaceAll('|', ',').replaceAll(';', ',');
+      final cleanedQuotes = normalized.replaceAll('"', '').replaceAll("'", '');
+      final parts = cleanedQuotes
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      return parts.isEmpty ? [s] : parts;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // --- Factory dari JSON (defensif terhadap berbagai nama field) ---
   factory Product.fromJson(Map<String, dynamic> json) {
-    int? _asInt(dynamic v) {
-      if (v == null) return null;
-      if (v is int) return v;
-      if (v is num) return v.toInt();
-      return int.tryParse(v.toString());
-    }
+    // name: support many keys
+    final name = (json['name'] ??
+            json['title'] ??
+            json['product_name'] ??
+            json['nama'] ??
+            json['productName'] ??
+            '')
+        .toString();
 
-    double? _asDouble(dynamic v) {
-      if (v == null) return null;
-      if (v is double) return v;
-      if (v is num) return v.toDouble();
-      return double.tryParse(v.toString());
-    }
+    // description: support many keys
+    final description = (json['description'] ??
+            json['desc'] ??
+            json['product_description'] ??
+            json['product_desc'] ??
+            json['deskripsi'] ??
+            json['detail'] ??
+            '')
+        .toString();
 
-    bool _asBool(dynamic v) {
-      if (v == null) return false;
-      if (v is bool) return v;
-      if (v is num) return v != 0;
-      final s = v.toString().toLowerCase().trim();
-      return s == 'true' || s == '1' || s == 'yes';
-    }
-
-    final rawImage =
-        (json['image_url'] ?? json['imagePath'] ?? json['image'] ?? '').toString();
-
-    // kalau backend nggak kirim gambar, pakai placeholder biar nggak error asset
-    final resolvedImage = rawImage.isEmpty
-        ? 'https://via.placeholder.com/300x300?text=No+Image'
-        : rawImage;
-
-    // --- dukung format nested: { store: { id / store_id, name / store_name } } ---
-    String? nestedStoreName;
-    int? nestedStoreId;
-    final storeJson = json['store'];
-    if (storeJson is Map<String, dynamic>) {
-      final sName = storeJson['store_name'] ?? storeJson['name'];
-      nestedStoreName = sName?.toString();
-      nestedStoreId = _asInt(storeJson['store_id'] ?? storeJson['id']);
-    }
-
-    final bool boostedFlag = _asBool(
-      json['is_boosted'] ?? json['boosted'] ?? json['isBoosted'],
-    );
+    // image path: support many keys
+    final imagePath = (json['imagePath'] ??
+            json['image'] ??
+            json['image_path'] ??
+            json['gambar'] ??
+            json['photo'] ??
+            json['thumbnail'] ??
+            '')
+        .toString();
 
     return Product(
-      productId: _asInt(json['product_id']),
-      name: (json['product_name'] ?? json['name'] ?? '').toString(),
-      description: (json['description'] ?? '').toString(),
-      // price dikonversi pakai helper, aman kalau "90000" (String)
-      price: _asDouble(json['price']) ?? 0,
-      stock: _asInt(json['stock']) ?? 0,
-      discount: _asDouble(json['discount']),
-      categoryId: _asInt(json['category_id']),
-      imagePath: resolvedImage,
-      storeName: nestedStoreName ?? json['store_name']?.toString(),
-      storeId: nestedStoreId ?? _asInt(json['store_id']),
-      isBoosted: boostedFlag,
+      productId: json['productId'] ??
+          json['id'] ??
+          json['product_id'] ??
+          json['pid'] ??
+          json['id_product'],
+      storeId: json['storeId'] != null
+          ? _parseInt(json['storeId'])
+          : (json['store_id'] != null ? _parseInt(json['store_id']) : null),
+      name: name,
+      description: description,
+      price:
+          _parseNum(json['price'] ?? json['harga'] ?? json['product_price'] ?? 0),
+      discount: _parseDoubleNullable(
+          json['discount'] ?? json['diskon'] ?? json['product_discount']),
+      imagePath: imagePath,
+      stock: _parseInt(
+          json['stock'] ?? json['stok'] ?? json['qty'] ?? json['quantity'] ?? 0),
+      categoryId: json['categoryId'] != null
+          ? _parseInt(json['categoryId'])
+          : (json['category_id'] != null ? _parseInt(json['category_id']) : null),
+      storeName: (json['storeName'] ??
+              json['sellerName'] ??
+              json['store_name'] ??
+              json['toko'] ??
+              json['seller'])
+          ?.toString(),
+      sizes: _parseSizes(json['sizes'] ??
+          json['size'] ??
+          json['variants'] ??
+          json['variant'] ??
+          json['ukuran'] ??
+          json['size_list']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'product_id': productId,
-      'product_name': name,
+      'productId': productId,
+      'storeId': storeId,
+      'name': name,
       'description': description,
       'price': price,
-      'stock': stock,
       'discount': discount,
-      'category_id': categoryId,
-      'image_url': imagePath,
-      'store_name': storeName,
-      'store_id': storeId,
-      'is_boosted': isBoosted,
+      'imagePath': imagePath,
+      'stock': stock,
+      'categoryId': categoryId,
+      'storeName': storeName,
+      'sizes': sizes,
     };
   }
 }

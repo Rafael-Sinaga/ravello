@@ -20,11 +20,21 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   static const Color primaryColor = Color(0xFF124170);
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
-  // list produk (awal kosong, tidak ada dummy)
+  // list produk (awal kosong)
   final List<_ProductItem> _products = [];
 
   bool _isLoading = false;
   String? _errorMessage;
+
+  // daftar kategori lokal
+  final List<Map<String, dynamic>> _categories = const [
+    {'id': 1, 'label': 'Elektronik'},
+    {'id': 2, 'label': 'Fashion & Aksesoris'},
+    {'id': 3, 'label': 'Kecantikan & Perawatan'},
+    {'id': 4, 'label': 'Makanan & Minuman'},
+    {'id': 5, 'label': 'Rumah Tangga'},
+    {'id': 6, 'label': 'Lainnya'},
+  ];
 
   @override
   void initState() {
@@ -42,17 +52,16 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       final prefs = await SharedPreferences.getInstance();
       final storeId = prefs.getInt('storeId');
 
-      // 🔥 Ambil daftar produk yang sedang di-boost dari SharedPreferences
-      final boostedList = prefs.getStringList('boosted_product_ids') ?? <String>[];
-      final boostedIds = boostedList
-          .map((e) => int.tryParse(e))
-          .whereType<int>()
-          .toSet();
+      // Ambil daftar produk yang sedang di-boost dari SharedPreferences
+      final boostedList =
+          prefs.getStringList('boosted_product_ids') ?? <String>[];
+      final boostedIds =
+          boostedList.map((e) => int.tryParse(e)).whereType<int>().toSet();
 
       // Ambil semua produk dari backend
       final allProducts = await ProductService.fetchProducts();
 
-      // Filter produk yang punya storeId sama dengan toko ini
+      // Filter produk untuk toko ini
       final myProducts = storeId == null
           ? allProducts
           : allProducts.where((p) => p.storeId == storeId).toList();
@@ -65,7 +74,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
               (p) => _ProductItem.fromProduct(
                 p,
                 isBoosted: p.productId != null &&
-                    boostedIds.contains(p.productId),
+                    p.productId is int &&
+                    boostedIds.contains(p.productId as int),
               ),
             ),
           );
@@ -83,10 +93,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     }
   }
 
-  // 🔥 Toggle status boost untuk satu produk
+  // Toggle status boost
   Future<void> _toggleBoost(_ProductItem product) async {
     if (product.productId == null) {
-      // Produk belum punya ID backend → nanti kalau sudah tersimpan bisa di-boost
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -105,18 +114,14 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     bool newStatus;
 
     if (boostedList.contains(idStr)) {
-      // matikan boost
       boostedList.remove(idStr);
       newStatus = false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '"${product.name}" tidak di-boost lagi.',
-          ),
+          content: Text('"${product.name}" tidak di-boost lagi.'),
         ),
       );
     } else {
-      // aktifkan boost
       boostedList.add(idStr);
       newStatus = true;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,12 +135,10 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
     await prefs.setStringList('boosted_product_ids', boostedList);
 
-    // update state lokal
     if (!mounted) return;
     setState(() {
-      final index = _products.indexWhere(
-        (p) => p.productId == product.productId,
-      );
+      final index =
+          _products.indexWhere((p) => p.productId == product.productId);
       if (index != -1) {
         _products[index] = _products[index].copyWith(isBoosted: newStatus);
       }
@@ -166,10 +169,11 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       ),
       body: Column(
         children: [
-          // ====== HEADER / INFO SINGKAT ======
+          // header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: backgroundColor,
             child: const Text(
               'Tambah dan kelola produk yang dijual di toko kamu.',
@@ -180,7 +184,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
             ),
           ),
 
-          // ====== LIST PRODUK ======
+          // list produk
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -226,7 +230,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                           )),
           ),
 
-          // ====== TOMBOL TAMBAH PRODUK ======
+          // tombol tambah
           SafeArea(
             top: false,
             child: Padding(
@@ -268,7 +272,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
   Widget _buildProductCard(_ProductItem product, int index) {
     Widget _buildThumb() {
-      if (product.imagePath == null) {
+      if (product.imagePath == null || product.imagePath!.isEmpty) {
         return const Icon(
           Icons.image_outlined,
           color: primaryColor,
@@ -280,7 +284,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
           path.startsWith('http://') || path.startsWith('https://');
 
       if (kIsWeb || isNetworkImage) {
-        // Flutter Web atau URL gambar dari backend
         return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.network(
@@ -289,7 +292,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
           ),
         );
       } else {
-        // Mobile / desktop dengan path lokal (File)
         return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.file(
@@ -315,12 +317,11 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       ),
       child: Stack(
         children: [
-          // ListTile utama (produk)
           Padding(
             padding: const EdgeInsets.only(top: 6, right: 6, bottom: 2),
             child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
               leading: Container(
                 width: 46,
                 height: 46,
@@ -388,7 +389,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
             ),
           ),
 
-          // 🔥 Tombol Boost mengambang di pojok kanan atas
+          // Tombol Boost
           Positioned(
             top: 6,
             right: 8,
@@ -448,7 +449,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   }
 
   Future<void> _deleteProduct(_ProductItem product, int index) async {
-    // Kalau belum punya productId (produk lokal aja), hapus dari list saja
     if (product.productId == null) {
       setState(() {
         _products.removeAt(index);
@@ -466,17 +466,14 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            res['message'] ?? 'Produk berhasil dihapus.',
-          ),
+          content: Text(res['message'] ?? 'Produk berhasil dihapus.'),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            res['message'] ?? 'Gagal menghapus produk dari server.',
-          ),
+          content:
+              Text(res['message'] ?? 'Gagal menghapus produk dari server.'),
         ),
       );
     }
@@ -491,15 +488,20 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   }) {
     final nameController =
         TextEditingController(text: editing ? product?.name : '');
-    final priceController =
-        TextEditingController(text: editing ? product?.price.toString() : '');
-    final stockController =
-        TextEditingController(text: editing ? product?.stock.toString() : '');
+    final priceController = TextEditingController(
+        text: editing ? product?.price.toString() : '');
+    final stockController = TextEditingController(
+        text: editing ? product?.stock.toString() : '');
     final descController =
         TextEditingController(text: editing ? product?.description : '');
     XFile? pickedImage = editing && product?.imagePath != null
         ? XFile(product!.imagePath!)
         : null;
+
+    int? selectedCategoryId = editing
+        ? (product?.categoryId ??
+            (_categories.isNotEmpty ? _categories.first['id'] as int : 1))
+        : (_categories.isNotEmpty ? _categories.first['id'] as int : 1);
 
     showModalBottomSheet(
       context: context,
@@ -588,7 +590,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Upload gambar
+                    // upload gambar
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
@@ -638,7 +640,48 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
                     const SizedBox(height: 12),
 
-                    // Harga & stok (2 kolom)
+                    // Kategori
+                    const Text(
+                      'Kategori Produk',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InputDecorator(
+                      decoration: _inputDecoration('Pilih kategori'),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          isExpanded: true,
+                          value: selectedCategoryId,
+                          items: _categories
+                              .map(
+                                (cat) => DropdownMenuItem<int>(
+                                  value: cat['id'] as int,
+                                  child: Text(
+                                    cat['label'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF37474F),
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setModalState(() {
+                              selectedCategoryId = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Harga & stok
                     Row(
                       children: [
                         Expanded(
@@ -736,11 +779,24 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                             return;
                           }
 
-                          final price = double.tryParse(priceText) ?? 0;
-                          final stock = int.tryParse(stockText) ?? 0;
+                          if (selectedCategoryId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Kategori produk wajib dipilih.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final price =
+                              double.tryParse(priceText.replaceAll(',', '')) ??
+                                  0;
+                          final stock =
+                              int.tryParse(stockText.replaceAll(',', '')) ?? 0;
+                          final categoryId = selectedCategoryId!;
 
                           if (editing && product != null && index != null) {
-                            // Kalau belum punya productId, edit lokal saja
                             if (product.productId == null) {
                               setState(() {
                                 _products[index] = _ProductItem(
@@ -753,6 +809,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                   imagePath:
                                       pickedImage?.path ?? product.imagePath,
                                   isBoosted: product.isBoosted,
+                                  categoryId: categoryId,
                                 );
                               });
 
@@ -771,7 +828,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                 description: desc,
                                 price: price,
                                 stock: stock,
-                                categoryId: 1,
+                                categoryId: categoryId,
                               );
 
                               if (!mounted) return;
@@ -788,6 +845,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                     imagePath:
                                         pickedImage?.path ?? product.imagePath,
                                     isBoosted: product.isBoosted,
+                                    categoryId: categoryId,
                                   );
                                 });
 
@@ -818,8 +876,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               description: desc,
                               price: price,
                               stock: stock,
-                              categoryId: 1,
-                              // saat ini image belum dikirim ke backend
+                              categoryId: categoryId,
+                              // image belum dikirim ke backend
                             );
 
                             if (!mounted) return;
@@ -828,7 +886,8 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               setState(() {
                                 _products.add(
                                   _ProductItem(
-                                    productId: result['product_id'] as int?,
+                                    productId:
+                                        result['product_id'] as int?,
                                     storeId: result['store_id'] as int?,
                                     name: name,
                                     price: price,
@@ -836,6 +895,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                     description: desc,
                                     imagePath: pickedImage?.path,
                                     isBoosted: false,
+                                    categoryId: categoryId,
                                   ),
                                 );
                               });
@@ -918,7 +978,8 @@ class _ProductItem {
   final int stock;
   final String description;
   final String? imagePath;
-  final bool isBoosted; // 🔥 flag boost lokal
+  final bool isBoosted;
+  final int? categoryId;
 
   _ProductItem({
     this.productId,
@@ -929,11 +990,15 @@ class _ProductItem {
     required this.description,
     this.imagePath,
     this.isBoosted = false,
+    this.categoryId,
   });
 
   factory _ProductItem.fromProduct(Product p, {bool isBoosted = false}) {
+    final int? id =
+        p.productId is int ? p.productId as int : null;
+
     return _ProductItem(
-      productId: p.productId,
+      productId: id,
       storeId: p.storeId,
       name: p.name,
       price: p.price.toDouble(),
@@ -941,6 +1006,7 @@ class _ProductItem {
       description: p.description,
       imagePath: p.imagePath,
       isBoosted: isBoosted,
+      categoryId: p.categoryId,
     );
   }
 
@@ -953,6 +1019,7 @@ class _ProductItem {
     String? description,
     String? imagePath,
     bool? isBoosted,
+    int? categoryId,
   }) {
     return _ProductItem(
       productId: productId ?? this.productId,
@@ -963,6 +1030,7 @@ class _ProductItem {
       description: description ?? this.description,
       imagePath: imagePath ?? this.imagePath,
       isBoosted: isBoosted ?? this.isBoosted,
+      categoryId: categoryId ?? this.categoryId,
     );
   }
 }

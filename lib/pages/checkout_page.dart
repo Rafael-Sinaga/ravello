@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/address_provider.dart';
+import '../models/cart_model.dart';
 import '../models/product_model.dart';
 import 'order_page.dart';
 import 'edit_address_page.dart';
@@ -29,18 +30,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
   // ikon untuk setiap metode pembayaran (urutannya sama dengan "methods")
   static const List<String> paymentIcons = [
     'assets/images/Paylater.png', // PayLater
-    'assets/images/Dana.png',     // DANA
-    'assets/images/COD.png',      // COD
-    'assets/images/OVO.png',      // OVO
-    'assets/images/bank.png',     // Transfer Bank
+    'assets/images/Dana.png', // DANA
+    'assets/images/COD.png', // COD
+    'assets/images/OVO.png', // OVO
+    'assets/images/bank.png', // Transfer Bank
   ];
 
   // ikon untuk setiap bank (urutannya sama dengan "bankNames")
   static const List<String> bankIcons = [
-    'assets/images/BCA.png',     // BCA
+    'assets/images/BCA.png', // BCA
     'assets/images/Mandiri.png', // Mandiri
-    'assets/images/BNI.png',     // BNI
-    'assets/images/BRI.png',     // BRI
+    'assets/images/BNI.png', // BNI
+    'assets/images/BRI.png', // BRI
   ];
 
   int _selectedShipping = 0;
@@ -64,14 +65,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    // Ambil produk pertama dari keranjang (sementara 1 produk)
-    final Product product = cart.items.first;
-
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    orderProvider.addOrder(product);
 
-    // Opsional: hapus produk dari keranjang
-    cart.removeItem(product);
+    // kirim semua product ke OrderProvider (pakai addOrder lama)
+    for (final CartItem item in cart.items) {
+      orderProvider.addOrder(item.product);
+      // nanti kalau OrderProvider sudah dukung quantity / size,
+      // di sini tinggal ikut kirim item.quantity & item.size
+    }
+
+    // kosongkan keranjang
+    cart.clearCart();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -91,7 +95,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
-    final Product? product = cart.items.isNotEmpty ? cart.items.first : null;
+    final items = cart.items;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -112,9 +116,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              // kalau mau pakai bantuan / CS di checkout, taruh logic di sini
-            },
+            onPressed: () {},
             icon: const Icon(
               Icons.headset_mic_outlined,
               color: primaryColor,
@@ -122,7 +124,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
-      body: product == null
+      body: items.isEmpty
           ? const Center(
               child: Text(
                 'Tidak ada produk untuk di-checkout.\nSilakan tambahkan produk ke keranjang dulu.',
@@ -178,7 +180,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // TOTAL (sementara pakai harga produk pertama)
+                      // TOTAL (pakai total semua item)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -191,7 +193,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           ),
                           Text(
-                            'Rp ${_formatPrice(product.price)}',
+                            'Rp ${_formatPrice(cart.totalPrice)}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -361,7 +363,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       color: Color(0xFFE3ECF4),
                     ),
                     itemBuilder: (ctx, index) {
-                      final p = cart.items[index];
+                      final CartItem ci = cart.items[index];
+                      final Product p = ci.product;
                       return Row(
                         children: [
                           ClipRRect(
@@ -396,13 +399,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     color: Color(0xFF6F7A74),
                                   ),
                                 ),
+                                if (ci.size != null)
+                                  Text(
+                                    'Ukuran: ${ci.size}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF6F7A74),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Text(
-                            'x1', // TODO: ganti dengan quantity dari cart kalau sudah ada
-                            style: TextStyle(
+                          Text(
+                            'x${ci.quantity}',
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: primaryColor,
@@ -640,7 +651,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HEADER seperti "Toko Penjual" + icon toko
           Row(
             children: const [
               Icon(
@@ -663,59 +673,73 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
           // LIST MAKSIMAL 3 PRODUK
           for (int i = 0; i < visibleCount; i++) ...[
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      items[i].imagePath,
-                      width: 46,
-                      height: 46,
-                      fit: BoxFit.cover,
-                    ),
+            Builder(
+              builder: (context) {
+                final CartItem ci = items[i];
+                final Product p = ci.product;
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          items[i].name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: primaryColor,
-                          ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          p.imagePath,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.cover,
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Harga: Rp ${_formatPrice(items[i].price)}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF6F7A74),
-                          ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Harga: Rp ${_formatPrice(p.price)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6F7A74),
+                              ),
+                            ),
+                            if (ci.size != null)
+                              Text(
+                                'Ukuran: ${ci.size}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF6F7A74),
+                                ),
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Text(
+                        'x${ci.quantity}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Text(
-                    'x1',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: primaryColor,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             if (i != visibleCount - 1) const SizedBox(height: 8),
           ],
@@ -760,13 +784,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             GestureDetector(
-              // mulai drag
               onHorizontalDragStart: (_) {
                 setState(() {
                   _isSliding = true;
                 });
               },
-              // saat drag
               onHorizontalDragUpdate: (details) {
                 final currentX = _sliderValue * maxThumbX;
                 final newX =
@@ -777,20 +799,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       maxThumbX == 0 ? 0.0 : newX / maxThumbX; // 0..1
                 });
               },
-              // lepas drag
               onHorizontalDragEnd: (_) {
                 setState(() {
                   _isSliding = false;
                 });
 
-                // WAJIB hampir mentok baru dianggap konfirmasi
                 if (_sliderValue >= 0.97) {
                   setState(() {
                     _sliderValue = 1.0;
                   });
                   _handleConfirmPayment();
                 } else {
-                  // kalau belum sampai ujung → balik lagi ke awal
                   setState(() {
                     _sliderValue = 0.0;
                   });
@@ -804,7 +823,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
                 child: Stack(
                   children: [
-                    // TEKS DI TENGAH
                     Center(
                       child: Text(
                         _sliderValue >= 0.97
@@ -817,8 +835,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
                       ),
                     ),
-
-                    // THUMB
                     Positioned(
                       left: _sliderValue * maxThumbX,
                       top: 3,
@@ -853,7 +869,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const Text(
               'Dengan men-swipe "Konfirmasi Pesanan", Anda menyetujui syarat dan ketentuan yang berlaku.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 color: Color(0xFF6F7A74),
               ),

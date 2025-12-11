@@ -1,3 +1,6 @@
+// lib/pages/detail_product.dart
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
@@ -21,9 +24,8 @@ class _DetailProductState extends State<DetailProduct> {
   bool _isFavorited = false;
   late String _favKey;
 
-  bool _isBoosted = false; // <<=== status boosted untuk produk ini
+  bool _isBoosted = false;
 
-  // ====== STATE ULASAN (LOKAL) ======
   final List<_Review> _reviews = [
     _Review(
       userName: 'Rafael',
@@ -54,9 +56,14 @@ class _DetailProductState extends State<DetailProduct> {
 
     _favKey =
         '${widget.product.name}_${widget.product.price}_${widget.product.imagePath}';
-
     _loadFavorite();
-    _checkBoostStatus(); // cek apakah produk ini termasuk boosted
+    _checkBoostStatus();
+
+    // preselect size if product.sizes has exactly one value
+    final resolvedSizes = _resolveSizes();
+    if (resolvedSizes != null && resolvedSizes.length == 1) {
+      selectedSize = resolvedSizes.first;
+    }
   }
 
   Future<void> _checkBoostStatus() async {
@@ -65,13 +72,14 @@ class _DetailProductState extends State<DetailProduct> {
     final ids = list.map((e) => int.tryParse(e)).whereType<int>().toSet();
 
     final id = widget.product.productId;
-    if (id != null && ids.contains(id)) {
-      if (mounted) {
-        setState(() {
+    if (id != null) {
+      final idInt = int.tryParse(id.toString());
+      if (idInt != null && ids.contains(idInt)) {
+        if (mounted) {
+          setState(() => _isBoosted = true);
+        } else {
           _isBoosted = true;
-        });
-      } else {
-        _isBoosted = true;
+        }
       }
     }
   }
@@ -94,14 +102,21 @@ class _DetailProductState extends State<DetailProduct> {
         favs.remove(_favKey);
         _isFavorited = false;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.product.name} dihapus dari favorit')),
+          SnackBar(
+            content: Text(
+              '${widget.product.name.isNotEmpty ? widget.product.name : 'Produk'} dihapus dari favorit',
+            ),
+          ),
         );
       } else {
         favs.add(_favKey);
         _isFavorited = true;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('${widget.product.name} ditambahkan ke favorit')),
+            content: Text(
+              '${widget.product.name.isNotEmpty ? widget.product.name : 'Produk'} ditambahkan ke favorit',
+            ),
+          ),
         );
       }
     });
@@ -117,23 +132,166 @@ class _DetailProductState extends State<DetailProduct> {
 
   String get _storeDisplayName {
     final name = widget.product.storeName;
-    if (name == null || name.trim().isEmpty) {
-      return 'Toko tidak diketahui';
-    }
+    if (name == null || name.trim().isEmpty) return 'Toko tidak diketahui';
     return name;
+  }
+
+  /// Resolve sizes: prefer product.sizes (already parsed by model).
+  /// If null/empty try to extract from description heuristically.
+  List<String>? _resolveSizes() {
+    final sizes = widget.product.sizes;
+    if (sizes != null && sizes.isNotEmpty) return sizes;
+
+    final fromDesc =
+        _extractSizesFromDescription(widget.product.description);
+    if (fromDesc != null && fromDesc.isNotEmpty) return fromDesc;
+
+    return null;
+  }
+
+  /// Heuristic parser: cari pola "Ukuran: ...", "Size: ...", atau array di deskripsi.
+  List<String>? _extractSizesFromDescription(String? desc) {
+    if (desc == null || desc.trim().isEmpty) return null;
+    final text = desc.trim();
+
+    // 1) cari isi di dalam kurung siku: [S, M, L] atau ["S","M","L"]
+    final bracketMatch = RegExp(r'\[([^\]]+)\]').firstMatch(text);
+    if (bracketMatch != null) {
+      final inside = bracketMatch.group(1); // isi di dalam [...]
+      if (inside != null && inside.trim().isNotEmpty) {
+        final parsed = _splitSizesString(inside);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    }
+
+    // 2) cari label "Ukuran" atau "Size" dan ambil sisa baris setelahnya
+    final labelRegex = RegExp(
+      r'(?:(?:ukuran|size)\s*[:\-]\s*)([^\n\r]+)',
+      caseSensitive: false,
+    );
+    final labelMatch = labelRegex.firstMatch(text);
+    if (labelMatch != null) {
+      final capture = labelMatch.group(1);
+      if (capture != null && capture.trim().isNotEmpty) {
+        final parsed = _splitSizesString(capture);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    }
+
+    // 3) cari pola "Ukuran" di baris baru seperti "Ukuran\nS M L"
+    final blockLabelRegex = RegExp(
+      r'(?:(?:ukuran|size)\s*[\r\n]+)([^\n\r]+)',
+      caseSensitive: false,
+    );
+    final blockMatch = blockLabelRegex.firstMatch(text);
+    if (blockMatch != null) {
+      final capture = blockMatch.group(1);
+      if (capture != null && capture.trim().isNotEmpty) {
+        final parsed = _splitSizesString(capture);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    }
+
+    // 4) fallback: cari token yang looks like sizes (S, M, L, XL, XXL, 36,38)
+    final tokens = text
+        .split(RegExp(r'[\s,;|·•\n\r]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    final common = <String>{
+      'xs',
+      's',
+      'm',
+      'l',
+      'xl',
+      'xxl',
+      'xxxl',
+      '36',
+      '37',
+      '38',
+      '39',
+      '40',
+      '41',
+      '42',
+      '43',
+      '44',
+      '45'
+    };
+    final found = <String>[];
+    for (final t in tokens) {
+      final low = t.toLowerCase();
+      if (common.contains(low) && !found.contains(t)) {
+        found.add(t);
+      }
+      // allow things like "S/M/L" or "S-M-L"
+      if (t.contains('/') || t.contains('-')) {
+        final parts = t
+            .split(RegExp(r'[\/\-]'))
+            .map((p) => p.trim())
+            .where((p) => p.isNotEmpty)
+            .toList();
+        for (final p in parts) {
+          if (!found.contains(p)) found.add(p);
+        }
+      }
+    }
+    return found.isEmpty ? null : found;
+  }
+
+  List<String> _splitSizesString(String raw) {
+    final cleaned = raw.replaceAll('"', '').replaceAll("'", '').trim();
+    final normalized = cleaned
+        .replaceAll('|', ',')
+        .replaceAll(';', ',')
+        .replaceAll('/', ',');
+    final parts = normalized
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    // If no comma-based split, maybe space separated
+    if (parts.length <= 1) {
+      final bySpace = cleaned
+          .split(RegExp(r'\s+'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (bySpace.length > 1) return bySpace;
+    }
+    return parts;
   }
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-
     final hasDiscount =
         widget.product.discount != null && widget.product.discount! > 0;
-
     final discountedPrice = hasDiscount
         ? widget.product.price -
             (widget.product.price * (widget.product.discount! / 100))
         : widget.product.price;
+
+    // safe fallbacks for name/description
+    final productName = widget.product.name.isNotEmpty
+        ? widget.product.name
+        : 'Produk tanpa nama';
+    final productDescription =
+        widget.product.description.isNotEmpty
+            ? widget.product.description
+            : 'Deskripsi tidak tersedia untuk produk ini.';
+
+    // imagePath fallback
+    final imagePath = widget.product.imagePath;
+    final bool hasImage = imagePath.isNotEmpty;
+
+    // hero tag: prefer imagePath (unique), else productId, else name fallback
+    final heroTag =
+        hasImage ? imagePath : (widget.product.productId?.toString() ?? productName);
+
+    // kalau dari backend / deskripsi tidak ketemu ukuran,
+    // fallback ke S M L XL supaya user tetap bisa pilih
+    final List<String> resolvedSizes =
+        _resolveSizes() ?? const ['S', 'M', 'L', 'XL'];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FBFD),
@@ -146,7 +304,7 @@ class _DetailProductState extends State<DetailProduct> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.product.name,
+          productName,
           style: const TextStyle(
             color: Color(0xFF124170),
             fontWeight: FontWeight.bold,
@@ -154,10 +312,6 @@ class _DetailProductState extends State<DetailProduct> {
           ),
         ),
       ),
-
-      // ===================
-      // BODY
-      // ===================
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
@@ -165,19 +319,13 @@ class _DetailProductState extends State<DetailProduct> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ===================
-              // IMAGE CARD LEBIH WAH + BADGE BOOST
-              // ===================
               Center(
                 child: Stack(
                   children: [
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Colors.white,
-                            Color(0xFFE7F1FA),
-                          ],
+                          colors: [Colors.white, Color(0xFFE7F1FA)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -191,35 +339,83 @@ class _DetailProductState extends State<DetailProduct> {
                         ],
                       ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 16),
+                        horizontal: 14,
+                        vertical: 16,
+                      ),
                       child: Hero(
-                        tag: widget.product.imagePath,
+                        tag: heroTag,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: widget.product.imagePath.startsWith('http')
-                              ? Image.network(
-                                  widget.product.imagePath,
+                          child: hasImage
+                              ? (imagePath.startsWith('http')
+                                  ? Image.network(
+                                      imagePath,
+                                      height: 200,
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(
+                                        Icons.broken_image,
+                                        size: 80,
+                                      ),
+                                    )
+                                  : (kIsWeb
+                                      ? Image.network(
+                                          imagePath,
+                                          height: 200,
+                                          fit: BoxFit.contain,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(
+                                            Icons.broken_image,
+                                            size: 80,
+                                          ),
+                                        )
+                                      : (File(imagePath).existsSync()
+                                          ? Image.file(
+                                              File(imagePath),
+                                              height: 200,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (context, error,
+                                                      stackTrace) =>
+                                                  const Icon(
+                                                Icons.broken_image,
+                                                size: 80,
+                                              ),
+                                            )
+                                          : Image.asset(
+                                              imagePath,
+                                              height: 200,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (context, error,
+                                                      stackTrace) =>
+                                                  const Icon(
+                                                Icons.broken_image,
+                                                size: 80,
+                                              ),
+                                            ))))
+                              : Container(
                                   height: 200,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.broken_image, size: 80),
-                                )
-                              : Image.asset(
-                                  widget.product.imagePath,
-                                  height: 200,
-                                  fit: BoxFit.contain,
+                                  width: 200,
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.image_not_supported_rounded,
+                                    size: 80,
+                                    color: Color(0xFF9CA3AF),
+                                  ),
                                 ),
                         ),
                       ),
                     ),
-
                     if (_isBoosted)
                       Positioned(
                         top: 10,
                         right: 10,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.shade50,
                             borderRadius: BorderRadius.circular(999),
@@ -256,11 +452,8 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 18),
 
-              // ===================
-              // NAMA & HARGA + BADGE DISKON
-              // ===================
               Text(
-                widget.product.name,
+                productName,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -268,7 +461,6 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
-
               const SizedBox(height: 4),
 
               Row(
@@ -286,7 +478,9 @@ class _DetailProductState extends State<DetailProduct> {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 6),
+                        vertical: 2,
+                        horizontal: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(4),
@@ -319,7 +513,6 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 10),
 
-              // Chip info singkat
               Row(
                 children: [
                   _buildInfoChip(
@@ -336,9 +529,7 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 25),
 
-              // ===================
-              // UKURAN + FAVORITE BUTTON
-              // ===================
+              // UKURAN + FAVORITE
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -356,54 +547,50 @@ class _DetailProductState extends State<DetailProduct> {
                       _isFavorited
                           ? Icons.favorite
                           : Icons.favorite_border_outlined,
-                      color: _isFavorited ? Colors.red : const Color(0xFF124170),
+                      color:
+                          _isFavorited ? Colors.red : const Color(0xFF124170),
                       size: 28,
                     ),
                     onPressed: _toggleFavorite,
-                  )
+                  ),
                 ],
               ),
 
               const SizedBox(height: 10),
 
+              // ukuran dalam bentuk bulat (S, M, L, XL)
               Wrap(
                 spacing: 10,
-                children: ['S', 'M', 'L', 'XL'].map((size) {
+                children: resolvedSizes.map((size) {
                   final isSelected = selectedSize == size;
-
                   return GestureDetector(
                     onTap: () => setState(() => selectedSize = size),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 10),
+                      duration: const Duration(milliseconds: 180),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
+                        shape: BoxShape.circle,
                         color: isSelected
                             ? const Color(0xFF124170)
-                            : Colors.white,
+                            : Colors.transparent,
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF124170)
-                              : Colors.grey.shade300,
+                              : const Color(0xFFCBD5E1),
+                          width: 1.4,
                         ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFF124170).withOpacity(0.25),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : [],
                       ),
+                      alignment: Alignment.center,
                       child: Text(
                         size,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Poppins',
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF1F2933),
                         ),
                       ),
                     ),
@@ -413,9 +600,6 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 22),
 
-              // ===================
-              // DESKRIPSI
-              // ===================
               const Text(
                 'Deskripsi',
                 style: TextStyle(
@@ -425,9 +609,7 @@ class _DetailProductState extends State<DetailProduct> {
                   fontFamily: 'Poppins',
                 ),
               ),
-
               const SizedBox(height: 6),
-
               Container(
                 width: double.infinity,
                 padding:
@@ -435,17 +617,12 @@ class _DetailProductState extends State<DetailProduct> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.withOpacity(0.18)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.18),
+                  ),
                 ),
                 child: Text(
-                  widget.product.description,
+                  productDescription,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black54,
@@ -457,9 +634,6 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 20),
 
-              // ===================
-              // INFORMASI TOKO
-              // ===================
               const Text(
                 'Toko',
                 style: TextStyle(
@@ -476,10 +650,7 @@ class _DetailProductState extends State<DetailProduct> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFE5EDFF),
-                      Color(0xFFF5F7FF),
-                    ],
+                    colors: [Color(0xFFE5EDFF), Color(0xFFF5F7FF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -550,15 +721,6 @@ class _DetailProductState extends State<DetailProduct> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Penjual di platform ini',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF9CA3AF),
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -589,9 +751,7 @@ class _DetailProductState extends State<DetailProduct> {
 
               const SizedBox(height: 24),
 
-              // ===================
-              // ULASAN PEMBELI
-              // ===================
+              // ULASAN
               const Text(
                 'Ulasan Pembeli',
                 style: TextStyle(
@@ -602,8 +762,6 @@ class _DetailProductState extends State<DetailProduct> {
                 ),
               ),
               const SizedBox(height: 6),
-
-              // Ringkasan rating
               Container(
                 width: double.infinity,
                 padding:
@@ -611,7 +769,9 @@ class _DetailProductState extends State<DetailProduct> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.withOpacity(0.18)),
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.18),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -678,7 +838,9 @@ class _DetailProductState extends State<DetailProduct> {
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFF124170)),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
@@ -710,12 +872,15 @@ class _DetailProductState extends State<DetailProduct> {
                     return Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: Colors.grey.withOpacity(0.15)),
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.15),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,7 +889,8 @@ class _DetailProductState extends State<DetailProduct> {
                             children: [
                               CircleAvatar(
                                 radius: 16,
-                                backgroundColor: const Color(0xFFE5EDFF),
+                                backgroundColor:
+                                    const Color(0xFFE5EDFF),
                                 child: Text(
                                   review.userName.isNotEmpty
                                       ? review.userName[0].toUpperCase()
@@ -793,9 +959,6 @@ class _DetailProductState extends State<DetailProduct> {
         ),
       ),
 
-      // ===================
-      // BOTTOM BUTTONS
-      // ===================
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -804,46 +967,9 @@ class _DetailProductState extends State<DetailProduct> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  if (selectedSize == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Pilih ukuran terlebih dahulu!')),
-                    );
-                    return;
-                  }
-
-                  cartProvider.addToCart(widget.product);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          '${widget.product.name} (${selectedSize!}) ditambahkan ke keranjang'),
-                      backgroundColor: const Color(0xFF124170),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF124170),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text(
-                  'Tambah ke Keranjang',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  if (selectedSize == null) {
+                  final sizes = resolvedSizes;
+                  if (sizes.isNotEmpty &&
+                      (selectedSize == null || selectedSize!.isEmpty)) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Pilih ukuran terlebih dahulu!'),
@@ -852,14 +978,69 @@ class _DetailProductState extends State<DetailProduct> {
                     return;
                   }
 
-                  cartProvider.addToCart(widget.product);
+                  Provider.of<CartProvider>(context, listen: false)
+                      .addToCart(
+                    widget.product,
+                    size: selectedSize,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${widget.product.name.isNotEmpty ? widget.product.name : 'Produk'}${selectedSize != null ? ' (${selectedSize!})' : ''} ditambahkan ke keranjang',
+                      ),
+                      backgroundColor: const Color(0xFF124170),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF124170),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text(
+                  'Tambah ke Keranjang',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  final sizes = resolvedSizes;
+                  if (sizes.isNotEmpty &&
+                      (selectedSize == null || selectedSize!.isEmpty)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Pilih ukuran terlebih dahulu!'),
+                      ),
+                    );
+                    return;
+                  }
 
-                  Navigator.pushNamed(context, '/checkout');
+                  Provider.of<CartProvider>(context, listen: false)
+                      .addToCart(
+                    widget.product,
+                    size: selectedSize,
+                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CheckoutPage(),
+                    ),
+                  );
                 },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF124170)),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: const Text(
@@ -878,8 +1059,6 @@ class _DetailProductState extends State<DetailProduct> {
     );
   }
 
-  // ====== HELPER UI & ULASAN ======
-
   Widget _buildInfoChip({required IconData icon, required String label}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -890,7 +1069,11 @@ class _DetailProductState extends State<DetailProduct> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: const Color(0xFF124170)),
+          Icon(
+            icon,
+            size: 14,
+            color: const Color(0xFF124170),
+          ),
           const SizedBox(width: 4),
           Text(
             label,
@@ -919,7 +1102,11 @@ class _DetailProductState extends State<DetailProduct> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: const Color(0xFF124170)),
+          Icon(
+            icon,
+            size: 13,
+            color: const Color(0xFF124170),
+          ),
           const SizedBox(width: 4),
           Text(
             label,
@@ -939,7 +1126,6 @@ class _DetailProductState extends State<DetailProduct> {
     const Color starColor = Color(0xFFFFB800);
     final fullStars = rating.floor();
     final hasHalf = (rating - fullStars) >= 0.5;
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (index) {
@@ -949,19 +1135,19 @@ class _DetailProductState extends State<DetailProduct> {
             size: 14,
             color: starColor,
           );
-        } else if (index == fullStars && hasHalf) {
+        }
+        if (index == fullStars && hasHalf) {
           return const Icon(
             Icons.star_half_rounded,
             size: 14,
             color: starColor,
           );
-        } else {
-          return const Icon(
-            Icons.star_border_rounded,
-            size: 14,
-            color: starColor,
-          );
         }
+        return const Icon(
+          Icons.star_border_rounded,
+          size: 14,
+          color: starColor,
+        );
       }),
     );
   }
@@ -1041,11 +1227,8 @@ class _DetailProductState extends State<DetailProduct> {
                     divisions: 8,
                     label: tempRating.toStringAsFixed(1),
                     activeColor: const Color(0xFF124170),
-                    onChanged: (val) {
-                      setModalState(() {
-                        tempRating = val;
-                      });
-                    },
+                    onChanged: (val) =>
+                        setModalState(() => tempRating = val),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -1061,7 +1244,8 @@ class _DetailProductState extends State<DetailProduct> {
                     controller: commentController,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      hintText: 'Ceritakan pengalamanmu dengan produk ini...',
+                      hintText:
+                          'Ceritakan pengalamanmu dengan produk ini...',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -1083,9 +1267,9 @@ class _DetailProductState extends State<DetailProduct> {
                           onPressed: () async {
                             final comment =
                                 commentController.text.trim();
-
                             if (comment.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
                                 const SnackBar(
                                   content:
                                       Text('Ulasan tidak boleh kosong.'),
@@ -1093,12 +1277,11 @@ class _DetailProductState extends State<DetailProduct> {
                               );
                               return;
                             }
-
                             final prefs =
                                 await SharedPreferences.getInstance();
-                            final name = prefs
-                                    .getString('current_user_name') ??
-                                'Pengguna';
+                            final name =
+                                prefs.getString('current_user_name') ??
+                                    'Pengguna';
 
                             setState(() {
                               _reviews.insert(
@@ -1113,10 +1296,13 @@ class _DetailProductState extends State<DetailProduct> {
                             });
 
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
+
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                    'Terima kasih! Ulasan kamu telah ditambahkan.'),
+                                  'Terima kasih! Ulasan kamu telah ditambahkan.',
+                                ),
                                 backgroundColor: Color(0xFF124170),
                               ),
                             );
@@ -1149,7 +1335,6 @@ class _DetailProductState extends State<DetailProduct> {
     final s = val.toString();
     final buffer = StringBuffer();
     int count = 0;
-
     for (int i = s.length - 1; i >= 0; i--) {
       buffer.write(s[i]);
       count++;
@@ -1158,12 +1343,9 @@ class _DetailProductState extends State<DetailProduct> {
         count = 0;
       }
     }
-
     return buffer.toString().split('').reversed.join('');
   }
 }
-
-// ====== MODEL ULASAN LOKAL ======
 
 class _Review {
   final String userName;

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../models/cart_model.dart';
 import '../models/product_model.dart';
 import 'checkout_page.dart';
 import '../widgets/navbar.dart';
@@ -75,84 +76,14 @@ class CartPage extends StatelessWidget {
             ),
           Expanded(
             child: cart.items.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE4F0FA),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 40,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Keranjang kamu masih kosong',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Yuk cari barang favoritmu di beranda dan tambahkan ke keranjang.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/home');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 28,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                            child: const Text(
-                              'Mulai Belanja',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                ? _buildEmptyState(context)
                 : ListView.builder(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: cart.items.length,
                     itemBuilder: (context, index) {
-                      // asumsikan List<Product>
-                      final product = cart.items[index] as Product;
+                      final CartItem cartItem = cart.items[index];
+                      final Product product = cartItem.product;
 
                       final imagePath = product.imagePath;
                       final name = product.name;
@@ -222,7 +153,17 @@ class CartPage extends StatelessWidget {
                                       color: primaryColor,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
+                                  if (cartItem.size != null)
+                                    Text(
+                                      'Ukuran: ${cartItem.size}',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 11,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'Rp ${_formatPrice(price)}',
                                     style: const TextStyle(
@@ -236,9 +177,40 @@ class CartPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // kontrol quantity sederhana (+ / -)
+                            Column(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.add_circle_outline,
+                                    size: 20,
+                                    color: primaryColor,
+                                  ),
+                                  onPressed: () =>
+                                      cart.increaseQuantity(cartItem),
+                                ),
+                                Text(
+                                  '${cartItem.quantity}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                    size: 20,
+                                    color: primaryColor,
+                                  ),
+                                  onPressed: () =>
+                                      cart.decreaseQuantity(cartItem),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 4),
                             InkWell(
                               borderRadius: BorderRadius.circular(999),
-                              onTap: () => cart.removeItem(product),
+                              onTap: () => cart.removeItem(cartItem),
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -330,15 +302,17 @@ class CartPage extends StatelessWidget {
                               );
 
                               Future.delayed(
-                                  const Duration(milliseconds: 500), () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const CheckoutPage(),
-                                  ),
-                                );
-                              });
+                                const Duration(milliseconds: 500),
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const CheckoutPage(),
+                                    ),
+                                  );
+                                },
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
@@ -371,6 +345,81 @@ class CartPage extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: const Navbar(currentIndex: 1),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    const primaryColor = Color(0xFF124170);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE4F0FA),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shopping_bag_outlined,
+                size: 40,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Keranjang kamu masih kosong',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Yuk cari barang favoritmu di beranda dan tambahkan ke keranjang.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/home');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text(
+                'Mulai Belanja',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

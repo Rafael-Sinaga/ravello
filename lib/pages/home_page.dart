@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (lower.contains('bukan json valid') ||
-        lower.contains('html') && lower.contains('server')) {
+        (lower.contains('html') && lower.contains('server'))) {
       return 'Data produk dari server tidak dapat dibaca. Coba lagi beberapa saat.';
     }
 
@@ -113,9 +113,6 @@ class _HomePageState extends State<HomePage> {
         _boostedProductIds = boostedIds;
         _isLoadingProducts = false;
       });
-
-      // debug dikit kalau mau lihat
-      // print('BOOSTED IDs: $_boostedProductIds');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -156,21 +153,297 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _promoTimer?.cancel();
     _promoController.dispose();
-    _searchController.dispose(); // <-- dispose controller search
+    _searchController.dispose();
     super.dispose();
+  }
+
+  /// ---------- POPUP TAMBAH (Shopee-style) ----------
+  void _openAddToCartSheet(Product product) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+
+    // simpan context root supaya SnackBar nempel ke Scaffold utama
+    final rootContext = context;
+
+    showModalBottomSheet(
+      context: rootContext,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        String? selectedSize;
+        int quantity = 1;
+
+        // SELALU punya daftar ukuran (kalau kosong fallback S, M, L, XL)
+        final List<String> sizes =
+            (product.sizes != null && product.sizes!.isNotEmpty)
+                ? product.sizes!
+                : ['S', 'M', 'L', 'XL'];
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final maxStock = product.stock > 0 ? product.stock : 9999;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // thumbnail
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: product.imagePath.startsWith('http')
+                              ? Image.network(
+                                  product.imagePath,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.broken_image),
+                                )
+                              : Image.asset(
+                                  product.imagePath,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Rp ${_formatPrice(product.price)}',
+                              style: const TextStyle(
+                                color: Color(0xFF124170),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (product.description.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                product.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(rootContext),
+                        icon: const Icon(Icons.close),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Pilih Ukuran',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // pilihan ukuran
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: sizes.map((s) {
+                      final isSelected = selectedSize == s;
+                      return GestureDetector(
+                        onTap: () => setState(() => selectedSize = s),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF124170)
+                                : Colors.white,
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF124170)
+                                  : Colors.grey.shade300,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            s,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Jumlah',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              if (quantity > 1) {
+                                setState(() => quantity -= 1);
+                              }
+                            },
+                            child: const Icon(Icons.remove),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            quantity.toString(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              if (quantity < maxStock) {
+                                setState(() => quantity += 1);
+                              } else {
+                                ScaffoldMessenger.of(rootContext)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Stok tidak cukup')),
+                                );
+                              }
+                            },
+                            child: const Icon(Icons.add),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Stok tersedia: ${product.stock}',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // validasi ukuran
+                        if (selectedSize == null || selectedSize!.isEmpty) {
+                          ScaffoldMessenger.of(rootContext).showSnackBar(
+                            const SnackBar(
+                              duration: Duration(seconds: 2),
+                              content: Text('Pilih ukuran terlebih dahulu'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // tambahkan sesuai quantity
+                        for (int i = 0; i < quantity; i++) {
+                          cart.addToCart(product, size: selectedSize);
+                        }
+
+                        Navigator.pop(rootContext);
+
+                        // pakai messenger dari root context biar konsisten di semua page
+                        final messenger = ScaffoldMessenger.of(rootContext);
+                        messenger.hideCurrentSnackBar();
+                        messenger.showSnackBar(
+                          SnackBar(
+                            duration: const Duration(seconds: 3),
+                            behavior: SnackBarBehavior.floating,
+                            margin:
+                                const EdgeInsets.fromLTRB(16, 0, 16, 72),
+                            content: Text(
+                              '${product.name} ($selectedSize) ditambahkan ke keranjang',
+                            ),
+                            backgroundColor: const Color(0xFF124170),
+                            action: SnackBarAction(
+                              label: 'Lihat',
+                              textColor: Colors.white,
+                              onPressed: () =>
+                                  Navigator.pushNamed(rootContext, '/cart'),
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF124170),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: const Text(
+                        'Tambah ke Keranjang',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
-    print("DEBUG: User di HomePage => ${user?.name}, ${user?.email}");
     final orderProvider = Provider.of<OrderProvider>(context);
     final cart = Provider.of<CartProvider>(context, listen: false);
 
     final hasPendingOrders = orderProvider.orders.any(
-  (o) => o.status != 'Selesai',
-);
-
+      (o) => o.status != 'Selesai',
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5FB),
@@ -674,30 +947,7 @@ class _HomePageState extends State<HomePage> {
                                               width: double.infinity,
                                               child: OutlinedButton.icon(
                                                 onPressed: () {
-                                                  cart.addToCart(product);
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        '${product.name} ditambahkan ke keranjang',
-                                                        style: const TextStyle(
-                                                            fontFamily:
-                                                                'Poppins'),
-                                                      ),
-                                                      backgroundColor:
-                                                          const Color(
-                                                              0xFF124170),
-                                                      action: SnackBarAction(
-                                                        label: 'Lihat',
-                                                        textColor: Colors.white,
-                                                        onPressed: () {
-                                                          Navigator.pushNamed(
-                                                              context,
-                                                              '/cart');
-                                                        },
-                                                      ),
-                                                    ),
-                                                  );
+                                                  _openAddToCartSheet(product);
                                                 },
                                                 style:
                                                     OutlinedButton.styleFrom(
@@ -864,10 +1114,10 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [
-              const Color(0xFF124170),
-              const Color(0xFF4F709C),
+              Color(0xFF124170),
+              Color(0xFF4F709C),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -920,22 +1170,22 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
 
-  // ================== HELPER FORMAT HARGA ==================
+// ================== HELPER FORMAT HARGA (TOP-LEVEL) ==================
 
-  String _formatPrice(num price) {
-    final int value = price.round();
-    final s = value.toString();
-    final buffer = StringBuffer();
-    int count = 0;
-    for (int i = s.length - 1; i >= 0; i--) {
-      buffer.write(s[i]);
-      count++;
-      if (count == 3 && i != 0) {
-        buffer.write('.');
-        count = 0;
-      }
+String _formatPrice(num price) {
+  final int value = price.round();
+  final s = value.toString();
+  final buffer = StringBuffer();
+  int count = 0;
+  for (int i = s.length - 1; i >= 0; i--) {
+    buffer.write(s[i]);
+    count++;
+    if (count == 3 && i != 0) {
+      buffer.write('.');
+      count = 0;
     }
-    return buffer.toString().split('').reversed.join('');
   }
+  return buffer.toString().split('').reversed.join('');
 }

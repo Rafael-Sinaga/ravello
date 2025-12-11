@@ -1,3 +1,4 @@
+// lib/services/auth_service.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,8 +56,7 @@ class AuthService {
         token = parsedToken;
 
         // ambil data user
-        final dynamic userJsonDynamic =
-            root['user'] ?? body['user'] ?? root;
+        final dynamic userJsonDynamic = root['user'] ?? body['user'] ?? root;
         final Map<String, dynamic> userJson =
             (userJsonDynamic is Map<String, dynamic>)
                 ? userJsonDynamic
@@ -104,6 +104,42 @@ class AuthService {
         await prefs.setBool('isSeller', currentUser!.isSeller);
         // 🔁 mirror ke flag lokal lama (buat kompatibel dengan kode lain yang masih pakai)
         await prefs.setBool('isSeller_local', currentUser!.isSeller);
+
+        // 🔐 === HANDLE STORE / TOKO PER AKUN ===
+        //
+        // Cari store_id dari berbagai kemungkinan field:
+        // - langsung di root / user
+        // - atau di object "store"
+        int? _asInt(dynamic v) {
+          if (v == null) return null;
+          if (v is int) return v;
+          if (v is num) return v.toInt();
+          return int.tryParse(v.toString());
+        }
+
+        int? storeId;
+        final storeObj = userJson['store'] ?? root['store'];
+
+        if (storeObj is Map<String, dynamic>) {
+          storeId = _asInt(
+            storeObj['store_id'] ?? storeObj['id'],
+          );
+        }
+
+        storeId ??= _asInt(
+          userJson['store_id'] ?? root['store_id'] ?? body['store_id'],
+        );
+
+        if (storeId != null) {
+          print('LOGIN: storeId untuk user ini = $storeId');
+          await prefs.setInt('storeId', storeId);
+        } else {
+          // user ini belum punya toko → jangan pakai storeId milik user sebelumnya
+          print('LOGIN: user belum punya toko, hapus storeId lama (jika ada).');
+          if (prefs.containsKey('storeId')) {
+            await prefs.remove('storeId');
+          }
+        }
 
         return {'success': true, 'data': body};
       } else {
@@ -241,10 +277,18 @@ class AuthService {
         await prefs.remove('profile_image_path');
       }
 
+      // 🧹 PENTING: hapus storeId & data boost supaya tidak kebawa ke akun lain
+      if (prefs.containsKey('storeId')) {
+        await prefs.remove('storeId');
+      }
+      if (prefs.containsKey('boosted_product_ids')) {
+        await prefs.remove('boosted_product_ids');
+      }
+
       currentUser = null;
       token = null;
 
-      print('AuthService: logout sukses — data user dihapus.');
+      print('AuthService: logout sukses — data user & store dihapus.');
     } catch (e) {
       print('AuthService.logout error: $e');
       currentUser = null;
