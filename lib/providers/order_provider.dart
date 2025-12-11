@@ -1,25 +1,56 @@
+// lib/providers/order_provider.dart
 import 'package:flutter/foundation.dart';
-import '../models/product_model.dart';
+import '../models/order_item.dart';
 import '../models/app_order.dart';
+import '../models/cart_model.dart';
+import '../models/product_model.dart';
 
 class OrderProvider with ChangeNotifier {
   final List<AppOrder> _orders = [];
 
   List<AppOrder> get orders => List.unmodifiable(_orders);
 
-  // Dipanggil dari Checkout ketika user konfirmasi
-  void addOrder(Product product) {
+  /// Add single-product legacy (keep for compatibility)
+  void addOrder(Product product, {int quantity = 1}) {
+    final items = <OrderItem>[
+      OrderItem(product: product, quantity: quantity, unitPrice: product.price),
+    ];
+
     final newOrder = AppOrder(
       id: 'INV-${DateTime.now().millisecondsSinceEpoch}',
-      product: product,
+      items: items,
       status: OrderStatus.belumBayar,
       createdAt: DateTime.now(),
     );
+
     _orders.add(newOrder);
     notifyListeners();
   }
 
-  // Helper kalau kamu mau update berdasarkan id dari backend nanti
+  /// NEW: create one order from a list of CartItem (checkout)
+  void addOrderFromCartItems(List<CartItem> cartItems) {
+    final items = cartItems.map((c) {
+      return OrderItem(
+        product: c.product,
+        quantity: c.quantity,
+        unitPrice: c.product.price,
+      );
+    }).toList();
+
+    if (items.isEmpty) return;
+
+    final newOrder = AppOrder(
+      id: 'INV-${DateTime.now().millisecondsSinceEpoch}',
+      items: items,
+      status: OrderStatus.belumBayar,
+      createdAt: DateTime.now(),
+    );
+
+    _orders.add(newOrder);
+    notifyListeners();
+  }
+
+  // update status by id
   void updateStatusById(String id, OrderStatus newStatus) {
     final idx = _orders.indexWhere((o) => o.id == id);
     if (idx == -1) return;
@@ -27,7 +58,6 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Versi simpel: update dengan objeknya langsung
   void updateStatus(AppOrder order, OrderStatus newStatus) {
     final idx = _orders.indexOf(order);
     if (idx == -1) return;
@@ -35,12 +65,9 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Untuk filter di Tab/tab penjual
   List<AppOrder> byStatus(OrderStatus status) {
     return _orders.where((o) => o.status == status).toList();
   }
-
-  // --- kompatibilitas lama ke NotificationPage lama ---
 
   String statusText(OrderStatus status) {
     switch (status) {
@@ -57,12 +84,12 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  // kalau masih ada yang manggil getStatus(product)
-  String getStatus(Product product) {
-    final order =
-        _orders.firstWhere((o) => o.product == product, orElse: () => 
-          AppOrder(id: '', product: product, status: OrderStatus.belumBayar, createdAt: DateTime.now()),
-        );
-    return statusText(order.status);
+  // Return order that contains given product (fallback create temp order)
+  AppOrder? orderContainingProduct(Product product) {
+    try {
+      return _orders.firstWhere((o) => o.items.any((it) => it.product.productId == product.productId));
+    } catch (_) {
+      return null;
+    }
   }
 }

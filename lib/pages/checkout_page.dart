@@ -67,24 +67,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
-    // kirim semua product ke OrderProvider (pakai addOrder lama)
-    for (final CartItem item in cart.items) {
-      orderProvider.addOrder(item.product);
-      // nanti kalau OrderProvider sudah dukung quantity / size,
-      // di sini tinggal ikut kirim item.quantity & item.size
-    }
+    // ======= NEW: buat 1 order dari semua CartItem =========
+    orderProvider.addOrderFromCartItems(cart.items);
 
     // kosongkan keranjang
     cart.clearCart();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Pesanan dikonfirmasi!'),
+        content: Text('Pesanan berhasil dibuat!'),
         backgroundColor: primaryColor,
       ),
     );
 
-    // Arahkan ke halaman "Pesanan Saya"
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const OrderPage()),
@@ -869,7 +864,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const Text(
               'Dengan men-swipe "Konfirmasi Pesanan", Anda menyetujui syarat dan ketentuan yang berlaku.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 color: Color(0xFF6F7A74),
               ),

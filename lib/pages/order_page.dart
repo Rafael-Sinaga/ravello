@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/order_provider.dart';
-import '../models/app_order.dart'; // <-- pakai AppOrder, bukan Product
+import '../models/app_order.dart'; // AppOrder
+import '../models/order_item.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -89,17 +90,14 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
-  // ================== TAB "BELUM BAYAR" ==================
-
   Widget _buildUnpaidTab(List<AppOrder> orders) {
-    // hanya ambil yang statusnya Belum Bayar
     final unpaid = orders
         .where((o) => o.status == OrderStatus.belumBayar)
         .toList();
 
     return Column(
       children: [
-        // KARTU ALAMAT PENGIRIMAN (UI saja)
+        // Alamat (UI)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Container(
@@ -172,7 +170,10 @@ class _OrderPageState extends State<OrderPage> {
                   itemCount: unpaid.length,
                   itemBuilder: (context, index) {
                     final order = unpaid[index];
-                    final product = order.product;
+                    final items = order.items;
+                    final firstImage = items.isNotEmpty ? items.first.product.imagePath : '';
+                    final totalPrice = order.totalPrice;
+                    final totalQty = order.totalQuantity;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -224,35 +225,51 @@ class _OrderPageState extends State<OrderPage> {
                             ),
                             const SizedBox(height: 10),
 
-                            // PRODUK
+                            // PRODUK RINGKASAN: thumbnail pertama + ringkasan jumlah
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.asset(
-                                    product.imagePath,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: firstImage.isNotEmpty
+                                      ? Image.asset(
+                                          firstImage,
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          width: 60,
+                                          height: 60,
+                                          color: const Color(0xFFF3F4F6),
+                                          child: const Icon(Icons.image_not_supported),
+                                        ),
                                 ),
                                 const SizedBox(width: 10),
-                                const Expanded(
+                                Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      SizedBox(height: 2),
-                                      Text(
+                                      const SizedBox(height: 2),
+                                      const Text(
                                         'Pesanan akan diproses setelah pembayaran terkonfirmasi.',
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: Color(0xFF6F7A74),
                                         ),
                                       ),
-                                      SizedBox(height: 4),
+                                      const SizedBox(height: 6),
                                       Text(
+                                        'Items: $totalQty • ${items.length} produk',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF6F7A74),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
                                         'Metode: Transfer Bank',
                                         style: TextStyle(
                                           fontSize: 11,
@@ -264,7 +281,7 @@ class _OrderPageState extends State<OrderPage> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Rp${product.price.toStringAsFixed(0)}',
+                                  'Rp${totalPrice.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -281,7 +298,6 @@ class _OrderPageState extends State<OrderPage> {
                 ),
         ),
 
-        // BAR KONFIRMASI PEMBAYARAN (tanpa slider)
         if (unpaid.isNotEmpty) _buildPaymentConfirmationBar(context),
       ],
     );
@@ -424,8 +440,6 @@ class _OrderPageState extends State<OrderPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Placeholder preview bukti
               Container(
                 width: double.infinity,
                 height: 140,
@@ -443,20 +457,13 @@ class _OrderPageState extends State<OrderPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: buka galeri dan pilih gambar
-                      },
+                      onPressed: () {},
                       icon: const Icon(Icons.photo_outlined, size: 18),
-                      label: const Text(
-                        'Galeri',
-                        style:
-                            TextStyle(fontFamily: 'Poppins', fontSize: 13),
-                      ),
+                      label: const Text('Galeri', style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         side: const BorderSide(color: primaryColor),
@@ -469,15 +476,9 @@ class _OrderPageState extends State<OrderPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: buka kamera dan ambil foto
-                      },
+                      onPressed: () {},
                       icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                      label: const Text(
-                        'Kamera',
-                        style:
-                            TextStyle(fontFamily: 'Poppins', fontSize: 13),
-                      ),
+                      label: const Text('Kamera', style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         side: const BorderSide(color: primaryColor),
@@ -490,12 +491,10 @@ class _OrderPageState extends State<OrderPage> {
                 ],
               ),
               const SizedBox(height: 18),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // TODO: validasi & upload bukti
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -533,10 +532,7 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
-  // ================== LIST PESANAN (TAB "SELESAI") ==================
-
   Widget _buildOrderList(List<AppOrder> orders) {
-    // hanya order dengan status Selesai
     final done = orders
         .where((o) => o.status == OrderStatus.selesai)
         .toList();
@@ -552,7 +548,10 @@ class _OrderPageState extends State<OrderPage> {
       itemCount: done.length,
       itemBuilder: (context, index) {
         final order = done[index];
-        final product = order.product;
+        final items = order.items;
+        final firstImage = items.isNotEmpty ? items.first.product.imagePath : '';
+        final totalPrice = order.totalPrice;
+        final totalQty = order.totalQuantity;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -573,14 +572,13 @@ class _OrderPageState extends State<OrderPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // HEADER: status + tanggal
+                // HEADER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.storefront_rounded,
-                            size: 18, color: primaryColor),
+                        Icon(Icons.storefront_rounded, size: 18, color: primaryColor),
                         SizedBox(width: 6),
                         Text(
                           'Toko Kamu',
@@ -593,8 +591,7 @@ class _OrderPageState extends State<OrderPage> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE2F4E8),
                         borderRadius: BorderRadius.circular(20),
@@ -614,57 +611,53 @@ class _OrderPageState extends State<OrderPage> {
                 const SizedBox(height: 6),
                 const Text(
                   'Pesanan telah tiba pada 5 Okt',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6F7A74),
-                  ),
+                  style: TextStyle(fontSize: 11, color: Color(0xFF6F7A74)),
                 ),
                 const SizedBox(height: 2),
                 const Text(
                   'Dikirim ke: Rumah Utama, Jakarta Selatan',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6F7A74),
-                  ),
+                  style: TextStyle(fontSize: 11, color: Color(0xFF6F7A74)),
                 ),
 
                 const SizedBox(height: 10),
                 const Divider(height: 1, color: Color(0xFFE3ECF4)),
                 const SizedBox(height: 10),
 
-                // DETAIL PRODUK
+                // DETAIL PRODUK RINGKAS
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        product.imagePath,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                      ),
+                      child: firstImage.isNotEmpty
+                          ? Image.asset(
+                              firstImage,
+                              width: 64,
+                              height: 64,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(width: 64, height: 64, color: const Color(0xFFF3F4F6)),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Jersey Home 23/24 • Size M',
+                            items.length == 1 ? items.first.product.name : '${items.first.product.name} dan ${items.length - 1} item lain',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: primaryColor,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Qty: 1',
-                            style: TextStyle(
+                            'Qty: $totalQty',
+                            style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF6F7A74),
                             ),
@@ -674,7 +667,7 @@ class _OrderPageState extends State<OrderPage> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Rp${product.price.toStringAsFixed(0)}',
+                      'Rp${totalPrice.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -688,71 +681,42 @@ class _OrderPageState extends State<OrderPage> {
                 const Divider(height: 1, color: Color(0xFFE3ECF4)),
                 const SizedBox(height: 8),
 
-                // FOOTER: info + tombol
+                // FOOTER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Pesanan selesai',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6F7A74),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF6F7A74)),
                     ),
                     Row(
                       children: [
                         OutlinedButton(
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Detail pesanan belum diimplementasi.'),
-                              ),
+                              const SnackBar(content: Text('Detail pesanan belum diimplementasi.')),
                             );
                           },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: primaryColor),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
-                          child: const Text(
-                            'Lihat Detail',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
-                            ),
-                          ),
+                          child: const Text('Lihat Detail', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primaryColor)),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Fitur beli lagi belum diimplementasi.'),
-                              ),
+                              const SnackBar(content: Text('Fitur beli lagi belum diimplementasi.')),
                             );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
-                          child: const Text(
-                            'Beli Lagi',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: const Text('Beli Lagi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
                         ),
                       ],
                     )
@@ -766,8 +730,6 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
-  // ================== EMPTY STATE (TAB KOSONG) ==================
-
   Widget _buildEmptyState({String message = 'Belum ada pesanan'}) {
     return Center(
       child: Column(
@@ -780,28 +742,16 @@ class _OrderPageState extends State<OrderPage> {
               color: Colors.white,
               border: Border.all(color: Colors.grey.withOpacity(0.2)),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 3)),
               ],
             ),
-            child: const Icon(
-              Icons.insert_drive_file_outlined,
-              size: 40,
-              color: primaryColor,
-            ),
+            child: const Icon(Icons.insert_drive_file_outlined, size: 40, color: primaryColor),
           ),
           const SizedBox(height: 16),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6F7A74),
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF6F7A74), fontWeight: FontWeight.w500),
           ),
         ],
       ),
