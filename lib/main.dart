@@ -23,6 +23,11 @@ import 'package:ravello/providers/cart_provider.dart';
 import 'package:ravello/providers/order_provider.dart';
 import 'package:ravello/providers/address_provider.dart'; // <--- TAMBAHAN
 
+// === Provider baru (sinkronisasi order dari backend) ===
+// Kalau file ini belum ada di project, buat file:
+// lib/providers/order_sync_provider.dart sesuai contoh yang kita bahas sebelumnya.
+import 'package:ravello/providers/order_sync_provider.dart';
+
 void main() {
   runApp(
     MultiProvider(
@@ -30,6 +35,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => AddressProvider()),
+        // Provider baru untuk polling / sinkron order backend
+        ChangeNotifierProvider(create: (_) => OrderSyncProvider()),
       ],
       child: const RavelloApp(),
     ),
