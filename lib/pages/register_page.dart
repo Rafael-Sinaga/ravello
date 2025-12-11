@@ -33,30 +33,50 @@ class _RegisterPageState extends State<RegisterPage> {
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
-    final phone = phoneController.text.trim(); // <--- Tetap (kalau nanti backend mau dipakai)
+    final phone = phoneController.text.trim(); // kalau nanti backend mau pakai
 
+    // ⬇️ Hanya register user ke backend.
     final result = await AuthService.register(
       name,
       email,
       password,
-    ); // backend harus disesuaikan jika mau kirim phone
+      // kalau backend sudah siap, bisa ikut kirim phone juga
+    );
 
     setState(() => isLoading = false);
 
-    if (result['success']) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OTPVerificationPage(
-            phoneNumber: email, // backend kirim OTP ke email ini
-          ),
+if (result['success']) {
+  // Kirim OTP untuk flow REGISTRATION
+  final otpResult = await AuthService.sendOtp(
+    email,
+    actionFlow: 'REGISTRATION',
+  );
+
+  if (otpResult['success'] == true) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OTPVerificationPage(
+          identifier: email,
+          actionFlow: 'REGISTRATION',
         ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registrasi gagal: ${result['message']}')),
-      );
-    }
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          otpResult['message'] ?? 'Gagal mengirim OTP registrasi',
+        ),
+      ),
+    );
+  }
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Registrasi gagal: ${result['message']}')),
+  );
+}
+
   }
 
   InputDecoration _inputStyle(String hint) {
@@ -102,7 +122,6 @@ class _RegisterPageState extends State<RegisterPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // 🔆 Sama kayak login: background terang, nuansa biru
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -120,7 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo & title
+                  // ... ⬇️ semua UI-mu yang lama tetap sama, tidak perlu diubah
                   Column(
                     children: [
                       Container(
@@ -157,10 +176,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // ===== CARD FORM =====
+                  // ... form card (nama, email, phone, password) -> biarkan seperti di kode kamu tadi
+                  // ...
                   Container(
                     width: double.infinity,
                     constraints: const BoxConstraints(maxWidth: 440),
@@ -194,11 +212,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: nameController,
-                          decoration:
-                              _inputStyle('Masukan nama lengkap Anda'),
+                          decoration: _inputStyle('Masukan nama lengkap Anda'),
                         ),
                         const SizedBox(height: 14),
-
                         const Text(
                           'Email',
                           style: TextStyle(
@@ -215,8 +231,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 14),
-
-                        // ====== Nomor Telepon ======
                         const Text(
                           'Nomor Telepon',
                           style: TextStyle(
@@ -262,8 +276,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                   filled: true,
                                   fillColor: const Color(0xFFF8F9FA),
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(
+                                  contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 14,
                                   ),
@@ -293,7 +306,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           ],
                         ),
                         const SizedBox(height: 14),
-
                         const Text(
                           'Kata Sandi',
                           style: TextStyle(
@@ -325,7 +337,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         const SizedBox(height: 22),
-
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -362,7 +373,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 16),
                   Center(
                     child: TextButton(

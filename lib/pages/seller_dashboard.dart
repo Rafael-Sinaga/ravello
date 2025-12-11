@@ -27,23 +27,94 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
   String? _profileImagePath;
   String? storeImagePath;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadStoreInfo();
-    _loadProfileImage();
+@override
+void initState() {
+  super.initState();
+  _initDashboard();
+}
+
+Future<void> _initDashboard() async {
+  final prefs = await SharedPreferences.getInstance();
+  final int? storeId = prefs.getInt('storeId');
+
+  if (storeId != null) {
+    final result = await AuthService.getStoreProfile().catchError((e){
+      print('getStoreProfile error: $e');
+      return {'success': false};
+    });
+
+    if (result['success'] == true) {
+      final data = result['data'] as Map<String, dynamic>;
+      if (mounted) {
+        setState(() {
+          storeName = data['storeName'] ?? prefs.getString('storeName') ?? storeName;
+          storeDescription = data['description'] ?? prefs.getString('storeDescription') ?? storeDescription;
+          storeImagePath = data['imagePath'] ?? prefs.getString('storeImagePath');
+        });
+      }
+      return;
+    }
   }
 
-  Future<void> _loadStoreInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      storeName = prefs.getString('storeName') ?? 'Nama Toko';
-      storeDescription =
-          prefs.getString('storeDescription') ?? 'Toko terpercaya di Ravello';
-      storeImagePath = prefs.getString('storeImagePath');
-    });
+  // fallback: baca dari prefs
+  await _loadStoreInfo();
+  await _loadProfileImage();
+}
+
+
+
+Future<void> _fetchStoreFromBackend() async {
+  final prefs = await SharedPreferences.getInstance();
+  final int? storeId = prefs.getInt('storeId'); 
+
+  if (storeId == null) return;
+
+  final result = await AuthService.getStoreProfile();
+  if (result['success'] == true) {
+    final data = result['data'];
+
+    await prefs.setString('storeName', data['storeName']);
+    await prefs.setString('storeDescription', data['description']);
+    if (data['imagePath'] != null) {
+      await prefs.setString('storeImagePath', data['imagePath']);
+    }
+
+    if (mounted) {
+      setState(() {
+        storeName = data['storeName'];
+        storeDescription = data['description'];
+        storeImagePath = data['imagePath'];
+      });
+    }
   }
+}
+
+  Future<void> _loadStoreInfo() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  var savedStoreName = prefs.getString('storeName');
+  if (savedStoreName == null || savedStoreName == 'Nama Toko') {
+    // coba tarik dari backend kalau belum ada
+    await AuthService.getStoreProfile().catchError((e){
+      print('fallback getStoreProfile failed: $e');
+    });
+    savedStoreName = prefs.getString('storeName');
+  }
+
+  final savedStoreDesc = prefs.getString('storeDescription');
+  final savedStoreImage = prefs.getString('storeImagePath');
+
+  print('STORE PREFS -> name=$savedStoreName, desc=$savedStoreDesc, img=$savedStoreImage');
+
+  if (!mounted) return;
+  setState(() {
+    storeName = savedStoreName ?? 'Nama Toko';
+    storeDescription = savedStoreDesc ?? 'Toko terpercaya di Ravello';
+    storeImagePath = savedStoreImage;
+  });
+}
+
+
 
   Future<void> _loadProfileImage() async {
     final path = await AuthService.getProfileImagePath();
@@ -262,10 +333,19 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
                           radius: 32,
                           backgroundColor: const Color(0xFFE5E7EB),
                           backgroundImage: (storeImagePath != null && storeImagePath!.isNotEmpty)
-                              ? (kIsWeb ? NetworkImage(storeImagePath!) : FileImage(File(storeImagePath!)) as ImageProvider)
-                              : null,
-                          child: (storeImagePath == null || storeImagePath!.isEmpty)
-                              ? const Icon(Icons.storefront_outlined, size: 30, color: Color(0xFF9CA3AF))
+  ? (kIsWeb
+      ? NetworkImage(storeImagePath!)
+      : FileImage(File(storeImagePath!)) as ImageProvider)
+  : null,
+key: ValueKey(storeImagePath),
+
+                          child: (storeImagePath == null ||
+                                  storeImagePath!.isEmpty)
+                              ? const Icon(
+                                  Icons.storefront_outlined,
+                                  size: 30,
+                                  color: Color(0xFF9CA3AF),
+                                )
                               : null,
                         ),
                       ),

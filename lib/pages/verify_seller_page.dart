@@ -232,28 +232,39 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
         address: storeAddressController.text.trim(),
       );
 
-      final String message =
-          (result['message'] ?? '').toString().toLowerCase();
+      final prefs = await SharedPreferences.getInstance();
 
-      // ==================================================
-      // 1) KASUS GAGAL / ERROR (INCLUDING SUDAH PUNYA TOKO)
-      // ==================================================
+      // ====== KASUS GAGAL (TERMUKSUD SUDAH PUNYA TOKO) ======
       if (result['success'] != true) {
+<<<<<<< HEAD
         final alreadySeller = message.contains('hanya diperbolehkan mendaftar satu toko') ||
             message.contains('sudah memiliki toko') ||
             message.contains('sudah terdaftar sebagai penjual') ||
             message.contains('already have a store') ||
             message.contains('already registered');
+=======
+        final String msg = (result['message'] ?? '').toString();
+        final String msgLower = msg.toLowerCase();
+
+        // 🔴 BACKEND BILANG "SUDAH PUNYA TOKO" → ANGGAP SAJA SUDAH SELLER
+        final bool alreadySeller =
+            msgLower.contains('hanya diperbolehkan mendaftar satu toko') ||
+            msgLower.contains('sudah memiliki toko') ||
+            msgLower.contains('already has a store');
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
         if (alreadySeller) {
-          // >>> DI SINI KUNCI: force tandai user sebagai seller secara lokal
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isSeller', true);
-          await AuthService.setSellerStatus(true);
+  final dynamic storeIdDyn =
+      result['store_id'] ?? result['storeId'] ?? result['store_id_existing'];
+  final int? storeId =
+      storeIdDyn == null ? null : int.tryParse(storeIdDyn.toString());
+  if (storeId != null) {
+    await prefs.setInt('storeId', storeId);
+  }
 
-          if (!mounted) return;
-          setState(() => isLoading = false);
+  await AuthService.setSellerStatus(true);
 
+<<<<<<< HEAD
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -272,25 +283,68 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
           );
           return;
         }
+=======
+  // 🔥 TARIK PROFIL TOKO DARI DATABASE
+  await AuthService.getStoreProfile();
 
+  if (!mounted) return;
+  setState(() => isLoading = false);
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        msg.isNotEmpty
+            ? msg
+            : 'Akun kamu sudah terdaftar sebagai penjual.',
+      ),
+    ),
+  );
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const SellerDashboardPage(),
+    ),
+  );
+  return;
+}
+
+        // ❌ error biasa (bukan kasus "sudah punya toko")
         if (!mounted) return;
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result['message'] ?? 'Gagal mendaftar sebagai penjual.',
+              msg.isNotEmpty
+                  ? msg
+                  : 'Gagal mendaftar sebagai penjual.',
             ),
           ),
         );
         return;
       }
 
-      // ==========================
-      // 2) KASUS SUKSES NORMAL
-      // ==========================
+      // ====== KASUS SUKSES NORMAL ======
+      // simpan info dasar ke local (boleh, tapi nanti tetap override oleh DB)
+await prefs.setString('storeName', nameController.text.trim());
+await prefs.setString('storeDescription', storeDescController.text.trim());
+await prefs.setString('storeAddress', storeAddressController.text.trim());
+await prefs.setString('storeBankName', selectedBank ?? '');
+await prefs.setString(
+    'storeBankAccountNumber', bankAccountController.text.trim());
+await prefs.setString(
+    'storeBankAccountHolder', bankHolderController.text.trim());
 
-      final prefs = await SharedPreferences.getInstance();
+// simpan store_id dari backend
+final dynamic storeIdDyn = result['store_id'] ?? result['storeId'];
+final int? storeId =
+    storeIdDyn == null ? null : int.tryParse(storeIdDyn.toString());
+if (storeId != null) {
+  await prefs.setInt('storeId', storeId);
+}
 
+<<<<<<< HEAD
       await prefs.setString('storeName', nameController.text.trim());
       await prefs.setString('storeBankName', selectedBank ?? '');
       await prefs.setString(
@@ -300,28 +354,33 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       await prefs.setString('storeAddress', storeAddressController.text.trim());
       await prefs.setString(
           'storeDescription', storeDescController.text.trim());
+=======
+// jadikan user seller
+await AuthService.setSellerStatus(true);
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
-      // simpan store_id kalau dikirim backend
-      final storeId = result['store_id'];
-      if (storeId is int) {
-        await prefs.setInt('storeId', storeId);
-      }
+// 🔥 SETELAH storeId ada → tarik profil toko beneran dari DB
+await AuthService.getStoreProfile();
 
-      // tandai sebagai seller (local + AuthService)
-      await prefs.setBool('isSeller', true);
-      await AuthService.setSellerStatus(true);
+if (!mounted) return;
+setState(() => isLoading = false);
 
-      if (!mounted) return;
-      setState(() => isLoading = false);
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: Text(
+      result['message'] ?? 'Verifikasi berhasil!',
+    ),
+  ),
+);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message'] ?? 'Verifikasi berhasil!',
-          ),
-        ),
-      );
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const SellerDashboardPage(),
+  ),
+);
 
+<<<<<<< HEAD
       // pindah ke dashboard penjual
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -346,6 +405,8 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
           content: Text('Tidak dapat tersambung ke server. Periksa koneksi.'),
         ),
       );
+=======
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);

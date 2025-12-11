@@ -458,17 +458,31 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// Ambil status penjual dari AuthService (backend / shared prefs),
-  /// supaya konsisten di semua device selama user login.
+  /// lalu kombinasikan dengan flag lain (currentUser + storeId lokal).
   Future<void> _loadSellerStatus() async {
     try {
-      final status = await AuthService.getSellerStatus();
+      final statusFromService = await AuthService.getSellerStatus();
+
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getBool('isSeller');
+      final local = prefs.getBool('isSeller_local');
+      final storeId = prefs.getInt('storeId');
+      final hasStore = storeId != null && storeId > 0;
+      final memoryFlag = AuthService.currentUser?.isSeller ?? false;
+
+      final effective =
+          statusFromService || (stored ?? false) || (local ?? false) || hasStore || memoryFlag;
 
       if (!mounted) return;
       setState(() {
-        _isSeller = status;
+        _isSeller = effective;
       });
 
-      print('PROFILE _isSeller (from AuthService.getSellerStatus) = $_isSeller');
+      print(
+        '[PROFILE] _loadSellerStatus -> '
+        'statusFromService=$statusFromService, stored=$stored, local=$local, '
+        'hasStore=$hasStore, memoryFlag=$memoryFlag, effective=$_isSeller',
+      );
     } catch (e) {
       print('Gagal load seller status: $e');
     }

@@ -16,10 +16,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   InputDecoration _inputStyle(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(fontFamily: 'Poppins', color: Color(0xFF9AA7AB)),
+      hintStyle: const TextStyle(
+        fontFamily: 'Poppins',
+        color: Color(0xFF9AA7AB),
+      ),
       filled: true,
       fillColor: const Color(0xFFF8F9FA),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE6E9EB)),
@@ -36,45 +40,57 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future<void> handleSendOTP() async {
-    final email = emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap masukkan email')),
-      );
-      return;
-    }
+  final email = emailController.text.trim();
+  if (email.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Harap masukkan email')),
+    );
+    return;
+  }
+
+  if (!mounted) return;
+  setState(() => isLoading = true);
+
+  try {
+    // kirim OTP spesifik untuk reset password
+    final result = await AuthService.sendOtp(
+      email,
+      actionFlow: 'PASSWORD_RESET',
+    );
 
     if (!mounted) return;
-    setState(() => isLoading = true);
+    setState(() => isLoading = false);
 
-    try {
-      // Panggil API kirim OTP menggunakan email
-      final result = await AuthService.sendOtp(email);
-      if (!mounted) return;
-      setState(() => isLoading = false);
-
-      if (result['success'] == true) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OTPVerificationPage(
-              phoneNumber: email, // pakai email sebagai identifier
-            ),
+    if (result['success'] == true) {
+      // kalau OTP berhasil dikirim → pindah ke halaman OTP
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OTPVerificationPage(
+            identifier: email,          // email penerima OTP
+            actionFlow: 'PASSWORD_RESET',
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Gagal mengirim OTP')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => isLoading = false);
+        ),
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: $e')),
+        SnackBar(
+          content: Text(
+            result['message'] ?? 'Gagal mengirim OTP untuk reset password',
+          ),
+        ),
       );
     }
+  } catch (e) {
+    if (!mounted) return;
+    setState(() => isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Terjadi kesalahan: $e')),
+    );
   }
+}
+
+
 
   @override
   void dispose() {
@@ -93,7 +109,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Lupa Password', style: TextStyle(color: Colors.black, fontFamily: 'Poppins')),
+        title: const Text(
+          'Lupa Password',
+          style: TextStyle(color: Colors.black, fontFamily: 'Poppins'),
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -103,12 +122,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             children: [
               const Text(
                 'Masukkan Email Anda',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, fontFamily: 'Poppins'),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Poppins',
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Kami akan mengirimkan kode OTP ke email ini untuk mereset kata sandi Anda.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF8EA0A7), fontFamily: 'Poppins'),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF8EA0A7),
+                  fontFamily: 'Poppins',
+                ),
               ),
               const SizedBox(height: 24),
               TextField(
@@ -124,11 +151,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF124170),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: isLoading
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Kirim Kode OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Kirim Kode OTP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
                 ),
               ),
             ],

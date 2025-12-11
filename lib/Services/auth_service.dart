@@ -19,6 +19,7 @@ class AuthService {
   static UserModel? currentUser;
   static String? token;
 
+<<<<<<< HEAD
   /// helper: cek koneksi internet (via connectivity_plus)
   static Future<bool> _hasNetwork() async {
     try {
@@ -87,10 +88,28 @@ class AuthService {
         maxAttempts: 3,
         timeout: _loginTimeout,
       );
+=======
+  /// 🔑 LOGIN (fix: remove undefined userJson reference)
+static Future<Map<String, dynamic>> login(
+  String email,
+  String password,
+) async {
+  final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
 
-      print('LOGIN status: ${response.statusCode}');
-      print('LOGIN body  : ${response.body}');
+  try {
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        )
+        .timeout(_timeoutDuration);
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
+    print('LOGIN status: ${response.statusCode}');
+    print('LOGIN body  : ${response.body}');
+
+<<<<<<< HEAD
       if (response.statusCode == 200) {
         final Map<String, dynamic> body =
             jsonDecode(response.body) as Map<String, dynamic>;
@@ -216,12 +235,139 @@ class AuthService {
     } catch (e) {
       print('LOGIN error: $e');
       return {'success': false, 'message': 'Terjadi kesalahan koneksi: $e'};
+=======
+    if (response.statusCode != 200) {
+      return {
+        'success': false,
+        'message': 'Login gagal (${response.statusCode}): ${response.body}',
+      };
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
     }
+
+    final Map<String, dynamic> body =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> root = body;
+
+    // ======================
+    // TOKEN
+    // ======================
+    final String? parsedToken = root['token']?.toString();
+    if (parsedToken == null || parsedToken.isEmpty) {
+      return {
+        'success': false,
+        'message': 'Login berhasil tapi token tidak ditemukan di response.',
+      };
+    }
+    token = parsedToken;
+
+    // ======================
+    // NORMALISASI USER OBJECT
+    // ======================
+    final Map<String, dynamic> userObj =
+        (root['user'] is Map<String, dynamic>)
+            ? Map<String, dynamic>.from(root['user'])
+            : (root['client'] is Map<String, dynamic>)
+                ? Map<String, dynamic>.from(root['client'])
+                : (root['data'] is Map<String, dynamic>)
+                    ? Map<String, dynamic>.from(root['data'])
+                    : root;
+
+    final dynamic idRaw =
+        userObj['client_id'] ?? userObj['id'] ?? root['client_id'] ?? 0;
+    final dynamic nameRaw = userObj['name'] ?? root['name'] ?? '';
+    final dynamic mailRaw = userObj['email'] ?? root['email'] ?? '';
+
+    // ======================
+    // ROLE SELLER
+    // ======================
+    final dynamic rawRole = userObj['role'] ?? root['role'];
+    final String? roleString =
+        rawRole != null ? rawRole.toString().toLowerCase().trim() : null;
+    final bool isSellerFromRole = roleString == 'seller';
+
+    print('LOGIN ROLE DETECTED: $roleString (seller=$isSellerFromRole)');
+
+    final prefs = await SharedPreferences.getInstance();
+
+    // cek cache lama
+    final bool prevLocal =
+        prefs.getBool('isSeller') ?? prefs.getBool('isSeller_local') ?? false;
+    final int? cachedStoreId = prefs.getInt('storeId');
+    final bool hasStore = cachedStoreId != null && cachedStoreId > 0;
+
+    final bool effectiveSeller = isSellerFromRole || prevLocal || hasStore;
+
+    currentUser = UserModel(
+      id: int.tryParse(idRaw.toString()) ?? 0,
+      name: nameRaw.toString(),
+      email: mailRaw.toString(),
+      isSeller: effectiveSeller,
+    );
+
+    // simpan user ke prefs
+    await prefs.setString('auth_token', token!);
+    await prefs.setString('current_user_name', currentUser!.name);
+    await prefs.setString('current_user_email', currentUser!.email);
+    await prefs.setInt('current_user_id', currentUser!.id);
+    await prefs.setBool('isSeller', effectiveSeller);
+    await prefs.setBool('isSeller_local', effectiveSeller);
+
+    // ======================
+    // STORE HANDLING (PERBAIKAN BESAR)
+    // ======================
+    int? _asInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString());
+    }
+
+    int? storeId;
+
+    // cek userObj.store
+    final dynamic storeObj = userObj['store'] ?? root['store'];
+    if (storeObj is Map<String, dynamic>) {
+      storeId = _asInt(storeObj['store_id'] ?? storeObj['id']);
+    }
+
+    // fallback ke field langsung
+    storeId ??= _asInt(
+      userObj['store_id'] ?? root['store_id'] ?? body['store_id'],
+    );
+
+    if (storeId != null) {
+      print('LOGIN: storeId ditemukan = $storeId');
+      await prefs.setInt('storeId', storeId);
+
+      // langsung ambil profil toko → BIKIN UI SELALU TERUPDATE
+      try {
+        final r = await getStoreProfile();
+        print('REFRESH STORE AFTER LOGIN → $r');
+      } catch (e) {
+        print('ERROR getStoreProfile setelah login: $e');
+      }
+    } else {
+      // user tidak punya toko → bersihkan store lama dari akun sebelumnya
+      print('LOGIN: tidak ada storeId → hapus sisa data toko lama.');
+      await prefs.remove('storeId');
+      await prefs.remove('storeName');
+      await prefs.remove('storeDescription');
+      await prefs.remove('storeImagePath');
+    }
+
+    return {'success': true, 'data': body};
+  } catch (e) {
+    return {'success': false, 'message': 'Kesalahan koneksi: $e'};
   }
+}
+
 
   /// 📝 REGISTER (tetap seperti sebelumnya)
   static Future<Map<String, dynamic>> register(
-      String name, String email, String password) async {
+    String name,
+    String email,
+    String password,
+  ) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/postClient');
 
     try {
@@ -254,39 +400,88 @@ class AuthService {
       return {'success': false, 'message': 'Terjadi kesalahan koneksi: $e'};
     }
   }
+static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+  final url = Uri.parse('${ApiConfig.baseUrl}/auth/reset-password');
 
+<<<<<<< HEAD
   /// 📩 KIRIM OTP (berdasarkan email) (tetap sama)
   static Future<Map<String, dynamic>> sendOtp(String email) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/send-otp');
+=======
+  try {
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': newPassword,
+      }),
+    ).timeout(_timeoutDuration);
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return {'success': true, 'data': data};
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal reset password'
+      };
+    }
+  } catch (e) {
+    return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+  }
+}
+
+   /// 📩 KIRIM / REQUEST OTP
+  static Future<Map<String, dynamic>> sendOtp(
+    String email, {
+    required String actionFlow,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password');
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
     try {
       final response = await http
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email}),
+            body: jsonEncode({
+              'email': email,
+              'action_flow': actionFlow,
+            }),
           )
           .timeout(_timeoutDuration);
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': data};
+        return {'success': true, 'data': data, 'message': data['message']};
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Gagal mengirim OTP'
+          'message': data['message'] ?? 'Gagal mengirim OTP',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+      return {
+        'success': false,
+        'message': 'Kesalahan koneksi: $e',
+      };
     }
   }
 
+<<<<<<< HEAD
   /// ✅ VERIFIKASI OTP (email + kode OTP) (tetap sama)
+=======
+  /// ✅ VERIFIKASI OTP (email + otp + action_flow)
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
   static Future<Map<String, dynamic>> verifyOtp(
-      String email, String otp) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/postClient/verify-otp');
+    String email,
+    String otp, {
+    required String actionFlow,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/verify-otp');
 
     try {
       final response = await http
@@ -296,6 +491,7 @@ class AuthService {
             body: jsonEncode({
               'email': email,
               'otp': otp,
+              'action_flow': actionFlow,
             }),
           )
           .timeout(_timeoutDuration);
@@ -303,19 +499,30 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': data};
+        return {'success': true, 'data': data, 'message': data['message']};
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'OTP salah atau kadaluarsa'
+          'message': data['message'] ?? 'OTP salah atau kadaluarsa',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+      return {
+        'success': false,
+        'message': 'Kesalahan koneksi: $e',
+      };
     }
   }
 
+<<<<<<< HEAD
   /// 🚪 LOGOUT (tetap sama)
+=======
+
+
+
+
+  /// 🚪 LOGOUT
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
   static Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -347,6 +554,13 @@ class AuthService {
       if (prefs.containsKey('storeName')) {
         await prefs.remove('storeName');
       }
+      if (prefs.containsKey('storeDescription')) {
+        await prefs.remove('storeDescription');
+      }
+      if (prefs.containsKey('storeImagePath')) {
+        await prefs.remove('storeImagePath');
+      }
+
 
       // 🧹 PENTING: hapus storeId & data boost supaya tidak kebawa ke akun lain
       if (prefs.containsKey('storeId')) {
@@ -404,30 +618,34 @@ class AuthService {
 
   /// ✅ Ambil seller status (untuk tombol "Daftar penjual / Lihat toko") (tetap sama)
   static Future<bool> getSellerStatus() async {
+    // 1️⃣ dari memori dulu
+    if (currentUser != null) {
+      return currentUser!.isSeller;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
 
+<<<<<<< HEAD
       final bool local =
           prefs.getBool('isSeller') ?? prefs.getBool('isSeller_local') ?? false;
       final bool memory = currentUser?.isSeller ?? false;
+=======
+      final bool? stored = prefs.getBool('isSeller');
+      final bool? local = prefs.getBool('isSeller_local');
+      final int? storeId = prefs.getInt('storeId');
+>>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
-      final int? storedStoreId = prefs.getInt('storeId');
-      final bool hasStore = storedStoreId != null && storedStoreId > 0;
+      final bool hasStore = storeId != null && storeId > 0;
+      final bool result = (stored ?? local ?? false) || hasStore;
 
-      final bool result = local || memory || hasStore;
-
-      // sinkronkan kembali ke currentUser bila sudah ada
-      if (currentUser != null) {
-        currentUser!.isSeller = result;
-      }
-
-      print('AuthService.getSellerStatus -> '
-          'local=$local, memory=$memory, hasStore=$hasStore, result=$result');
+      print(
+          'AuthService.getSellerStatus -> local=${stored ?? local}, memory=${currentUser?.isSeller}, hasStore=$hasStore, result=$result');
 
       return result;
     } catch (e) {
       print('AuthService.getSellerStatus error: $e');
-      return currentUser?.isSeller ?? false;
+      return false;
     }
   }
 
@@ -442,4 +660,67 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('profile_image_path');
   }
+
+// di dalam class AuthService
+
+/// di AuthService
+static Future<Map<String, dynamic>> getStoreProfile() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final int? storeId = prefs.getInt('storeId');
+    if (storeId == null) {
+      return {'success': false, 'message': 'storeId tidak ditemukan'};
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/store/$storeId');
+    final response = await http.get(url).timeout(_timeoutDuration);
+
+    if (response.statusCode != 200) {
+      return {
+        'success': false,
+        'message': 'Gagal mengambil profil toko (${response.statusCode})'
+      };
+    }
+
+    final Map<String, dynamic> body = jsonDecode(response.body) as Map<String, dynamic>;
+    final Map<String, dynamic> data = (body['data'] ?? body) as Map<String, dynamic>;
+
+    // Normalize keys: support snake_case dan camelCase
+    String? storeName = data['storeName']?.toString()
+        ?? data['store_name']?.toString()
+        ?? data['store_name_translated']?.toString()
+        ?? data['store_name_raw']?.toString();
+
+    String? description = data['description']?.toString()
+        ?? data['storeDescription']?.toString()
+        ?? data['store_description']?.toString();
+
+    String? imagePath = data['imagePath']?.toString()
+        ?? data['image_path']?.toString()
+        ?? data['storeImagePath']?.toString()
+        ?? data['store_image_path']?.toString();
+
+    // Write canonical keys to prefs
+    if (storeName != null) await prefs.setString('storeName', storeName);
+    if (description != null) await prefs.setString('storeDescription', description);
+    if (imagePath != null) await prefs.setString('storeImagePath', imagePath);
+
+    return {
+      'success': true,
+      'data': {
+        'storeName': storeName,
+        'description': description,
+        'imagePath': imagePath,
+      }
+    };
+  } catch (e) {
+    print('AuthService.getStoreProfile error: $e');
+    return {'success': false, 'message': 'Kesalahan koneksi: $e'};
+  }
+}
+
+
+
+
+
 }
