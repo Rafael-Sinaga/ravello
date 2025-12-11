@@ -1,14 +1,11 @@
-import 'dart:async';
+import '../services/auth_service.dart';
+import '../services/seller_service.dart'; // <--- IMPORT UNTUK HIT BACKEND
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-
-import '../services/auth_service.dart';
-import '../services/seller_service.dart'; // <--- IMPORT UNTUK HIT BACKEND
 import 'seller_dashboard.dart';
 
 class VerifySellerPage extends StatefulWidget {
@@ -52,10 +49,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
   final ImagePicker picker = ImagePicker();
   bool isLoading = false;
 
-  // Retry / timeout config
-  final int _maxAttempts = 3;
-  final Duration _attemptTimeout = const Duration(seconds: 12);
-
   Future<void> _pickKtpImage() async {
     try {
       final XFile? pickedFile = await picker.pickImage(
@@ -69,11 +62,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       }
     } catch (e) {
       debugPrint("Error picking KTP image: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal memilih gambar KTP.')),
-        );
-      }
     }
   }
 
@@ -90,11 +78,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       }
     } catch (e) {
       debugPrint("Error capturing KTP photo: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengambil foto KTP.')),
-        );
-      }
     }
   }
 
@@ -115,56 +98,10 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       }
     } catch (e) {
       debugPrint("Error verifying face: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
-        );
-      }
-    }
-  }
-
-  Future<bool> _hasNetwork() async {
-    try {
-      final conn = await Connectivity().checkConnectivity();
-      return conn != ConnectivityResult.none;
-    } catch (e) {
-      debugPrint('Connectivity check failed: $e');
-      return false;
-    }
-  }
-
-  /// wrapper that attempts calling SellerService.registerStore with retry + timeout
-  Future<Map<String, dynamic>> _attemptRegisterStore({
-    required String storeName,
-    required String description,
-    required String address,
-  }) async {
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        final future = SellerService.registerStore(
-          storeName: storeName,
-          description: description,
-          address: address,
-        );
-        final result = await future.timeout(_attemptTimeout);
-        return result;
-      } on TimeoutException catch (e) {
-        debugPrint('Attempt $attempt timed out: $e');
-        if (attempt >= _maxAttempts) rethrow;
-      } on SocketException catch (e) {
-        debugPrint('Attempt $attempt socket error: $e');
-        if (attempt >= _maxAttempts) rethrow;
-      } catch (e) {
-        // Any other error from service — bubble up after last attempt
-        debugPrint('Attempt $attempt failed: $e');
-        if (attempt >= _maxAttempts) rethrow;
-      }
-
-      // exponential backoff
-      final backoffMs = 500 * (1 << (attempt - 1));
-      await Future.delayed(Duration(milliseconds: backoffMs));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Gagal memverifikasi wajah. Coba lagi nanti.')),
+      );
     }
   }
 
@@ -215,18 +152,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
       return;
     }
 
-    final hasNet = await _hasNetwork();
-    if (!hasNet) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada koneksi. Periksa internetmu.')),
-      );
-      return;
-    }
-
     setState(() => isLoading = true);
 
     try {
-      final result = await _attemptRegisterStore(
+      // ====== HIT BACKEND UNTUK DAFTAR TOKO ======
+      final result = await SellerService.registerStore(
         storeName: nameController.text.trim(),
         description: storeDescController.text.trim(),
         address: storeAddressController.text.trim(),
@@ -236,13 +166,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
       // ====== KASUS GAGAL (TERMUKSUD SUDAH PUNYA TOKO) ======
       if (result['success'] != true) {
-<<<<<<< HEAD
-        final alreadySeller = message.contains('hanya diperbolehkan mendaftar satu toko') ||
-            message.contains('sudah memiliki toko') ||
-            message.contains('sudah terdaftar sebagai penjual') ||
-            message.contains('already have a store') ||
-            message.contains('already registered');
-=======
         final String msg = (result['message'] ?? '').toString();
         final String msgLower = msg.toLowerCase();
 
@@ -251,7 +174,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
             msgLower.contains('hanya diperbolehkan mendaftar satu toko') ||
             msgLower.contains('sudah memiliki toko') ||
             msgLower.contains('already has a store');
->>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
         if (alreadySeller) {
   final dynamic storeIdDyn =
@@ -264,32 +186,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
   await AuthService.setSellerStatus(true);
 
-<<<<<<< HEAD
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result['message'] ?? 'Akun Anda sudah terdaftar sebagai penjual.',
-              ),
-            ),
-          );
-
-          // langsung ke dashboard penjual
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SellerDashboardPage(),
-            ),
-          );
-          return;
-        }
-=======
   // 🔥 TARIK PROFIL TOKO DARI DATABASE
   await AuthService.getStoreProfile();
 
   if (!mounted) return;
   setState(() => isLoading = false);
->>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -344,20 +245,8 @@ if (storeId != null) {
   await prefs.setInt('storeId', storeId);
 }
 
-<<<<<<< HEAD
-      await prefs.setString('storeName', nameController.text.trim());
-      await prefs.setString('storeBankName', selectedBank ?? '');
-      await prefs.setString(
-          'storeBankAccountNumber', bankAccountController.text.trim());
-      await prefs.setString(
-          'storeBankAccountHolder', bankHolderController.text.trim());
-      await prefs.setString('storeAddress', storeAddressController.text.trim());
-      await prefs.setString(
-          'storeDescription', storeDescController.text.trim());
-=======
 // jadikan user seller
 await AuthService.setSellerStatus(true);
->>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
 
 // 🔥 SETELAH storeId ada → tarik profil toko beneran dari DB
 await AuthService.getStoreProfile();
@@ -380,37 +269,9 @@ Navigator.pushReplacement(
   ),
 );
 
-<<<<<<< HEAD
-      // pindah ke dashboard penjual
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SellerDashboardPage(),
-        ),
-      );
-    } on TimeoutException {
-      if (!mounted) return;
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Koneksi timeout saat mendaftar toko. Coba lagi.'),
-        ),
-      );
-    } on SocketException {
-      if (!mounted) return;
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak dapat tersambung ke server. Periksa koneksi.'),
-        ),
-      );
-=======
->>>>>>> 6157129b2faf56b9f137a3f4af23c289b15f0f00
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
-      debugPrint('Register store failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan: $e'),

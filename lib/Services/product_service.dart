@@ -43,12 +43,11 @@ class ProductService {
       print('CREATE PRODUCT storeId dari prefs: $storeId');
 
       // ❗ SESUAIKAN dengan mount router di backend:
-      // misal: app.use('/product', productRouter(con));
       final url = Uri.parse('${ApiConfig.baseUrl}/product');
 
       print('CREATE PRODUCT URL   : $url');
       print('CREATE PRODUCT TOKEN : $token');
-      print('CREATE PRODUCT BODY  : {'
+      print('CREATE PRODUCT BODY  : {' 
           'product_name: $name, '
           'description: $description, '
           'price: $price, '
@@ -156,51 +155,58 @@ class ProductService {
         };
       }
 
-      // ========= LOGIKA SUKSES (lebih longgar) =========
+      // ========= LOGIKA SUKSES (lebih robust) =========
       bool successFlag = false;
       int? productId;
       int? storeIdFromResponse;
 
+      // helper untuk ambil int dari berbagai tipe
+      int? _asInt(dynamic v) {
+        if (v == null) return null;
+        if (v is int) return v;
+        if (v is num) return v.toInt();
+        return int.tryParse(v.toString());
+      }
+
       if (decoded is Map<String, dynamic>) {
-        // 1) Kalau backend punya field "success", itu yang paling dipercaya
+        // 1) Tentukan successFlag: prefer explicit field, fallback ke HTTP code
         if (decoded.containsKey('success')) {
           successFlag = decoded['success'] == true;
+        } else if (decoded.containsKey('data')) {
+          // kalau ada data, anggap kemungkinan sukses (tapi cek juga kode HTTP)
+          successFlag = (response.statusCode == 200 || response.statusCode == 201);
         } else if (decoded.containsKey('product') ||
-            decoded.containsKey('product_id')) {
-          // 2) fallback: ada objek produk / product_id
+            decoded.containsKey('product_id') ||
+            decoded.containsKey('id')) {
           successFlag = true;
-        } else if (response.statusCode == 200 ||
-            response.statusCode == 201) {
-          // 3) fallback terakhir: status HTTP sukses
-          successFlag = true;
+        } else {
+          successFlag = (response.statusCode == 200 || response.statusCode == 201);
         }
 
-        // ambil product_id / store_id kalau ada
-        final productObj = decoded['product'];
+        // 2) Cek banyak lokasi kemungkinan product id:
+        // a) decoded['product'] (objek) atau decoded['data']['product']
+        final dynamic productObj = decoded['product'] ?? (decoded['data'] is Map ? decoded['data']['product'] : null);
         if (productObj is Map<String, dynamic>) {
-          if (productObj['id'] is int) {
-            productId = productObj['id'] as int;
-          } else if (productObj['product_id'] is int) {
-            productId = productObj['product_id'] as int;
-          }
-          if (productObj['store_id'] is int) {
-            storeIdFromResponse = productObj['store_id'] as int;
-          }
+          productId = _asInt(productObj['id'] ?? productObj['product_id'] ?? productObj['insertId']);
+          storeIdFromResponse = _asInt(productObj['store_id'] ?? productObj['storeId']);
         }
 
-        if (decoded['product_id'] is int) {
-          productId = decoded['product_id'] as int;
+        // b) decoded['data'] langsung (banyak API pake { data: { id: ... } })
+        final dynamic dataObj = decoded['data'];
+        if (dataObj is Map<String, dynamic>) {
+          productId ??= _asInt(dataObj['id'] ?? dataObj['product_id'] ?? dataObj['insertId']);
+          storeIdFromResponse ??= _asInt(dataObj['store_id'] ?? dataObj['storeId']);
         }
-        if (decoded['store_id'] is int) {
-          storeIdFromResponse = decoded['store_id'] as int;
-        }
+
+        // c) root-level fields
+        productId ??= _asInt(decoded['product_id'] ?? decoded['id'] ?? decoded['insertId']);
+        storeIdFromResponse ??= _asInt(decoded['store_id'] ?? decoded['storeId']);
       }
 
       // ❌ Kalau server TIDAK JELAS bilang "success", anggap GAGAL
       if (!successFlag) {
         final msg = (decoded is Map<String, dynamic>)
-            ? (decoded['message'] ??
-                'Server tidak mengkonfirmasi bahwa produk tersimpan.')
+            ? (decoded['message'] ?? 'Server tidak mengkonfirmasi bahwa produk tersimpan.')
             : 'Server tidak mengkonfirmasi bahwa produk tersimpan.';
         return {
           'success': false,
@@ -209,11 +215,9 @@ class ProductService {
         };
       }
 
-      // ⚠️ Kalau suksesFlag true tapi TIDAK ADA product_id → jangan error ke user,
-      // cukup log warning biar lu bisa cek di debug.
+      // ⚠️ Kalau suksesFlag true tapi TIDAK ADA product_id → log warning (jangan langsung error)
       if (productId == null) {
-        print(
-            'WARNING: Server mengembalikan sukses tapi tanpa product_id. Response: $decoded');
+        print('WARNING: Server mengembalikan sukses tapi tanpa product_id. Response: $decoded');
       }
 
       // ✅ Di titik ini kita anggap BERHASIL
@@ -431,8 +435,7 @@ class ProductService {
       return {
         'success': false,
         'message': decoded is Map<String, dynamic>
-            ? (decoded['message'] ??
-                'Server tidak mengkonfirmasi perubahan produk.')
+            ? (decoded['message'] ?? 'Server tidak mengkonfirmasi perubahan produk.')
             : 'Server tidak mengkonfirmasi perubahan produk.',
         'raw': decoded,
       };
@@ -495,8 +498,7 @@ class ProductService {
         }
         return {
           'success': false,
-          'message':
-              'Gagal membaca respons server saat menghapus produk.',
+          'message': 'Gagal membaca respons server saat menghapus produk.',
           'raw_body': response.body,
         };
       }
@@ -521,8 +523,7 @@ class ProductService {
       return {
         'success': false,
         'message': decoded is Map<String, dynamic>
-            ? (decoded['message'] ??
-                'Server tidak mengkonfirmasi penghapusan produk.')
+            ? (decoded['message'] ?? 'Server tidak mengkonfirmasi penghapusan produk.')
             : 'Server tidak mengkonfirmasi penghapusan produk.',
         'raw': decoded,
       };
