@@ -40,43 +40,58 @@ class _HomePageState extends State<HomePage> {
     _loadProducts();
   }
 
-  Future<void> _loadProducts() async {
-    setState(() {
-      _isLoadingProducts = true;
-      _productError = null;
+Future<void> _loadProducts() async {
+  print('LOAD PRODUCTS START');
+
+  setState(() {
+    _isLoadingProducts = true;
+    _productError = null;
+  });
+
+  try {
+    final list = await ProductService.fetchProducts();
+
+    print('PRODUCT LIST LENGTH: ${list.length}');
+    if (list.isNotEmpty) {
+      print('FIRST PRODUCT NAME: ${list.first.name}');
+      print('FIRST PRODUCT IMAGE: ${list.first.imagePath}');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final boostedStrings =
+        prefs.getStringList('boosted_product_ids') ?? <String>[];
+    final boostedIds =
+        boostedStrings.map((e) => int.tryParse(e)).whereType<int>().toSet();
+
+    list.sort((a, b) {
+      final aBoosted =
+          a.productId != null && boostedIds.contains(a.productId);
+      final bBoosted =
+          b.productId != null && boostedIds.contains(b.productId);
+      if (aBoosted == bBoosted) return 0;
+      return aBoosted ? -1 : 1;
     });
 
-    try {
-      final list = await ProductService.fetchProducts();
-      final prefs = await SharedPreferences.getInstance();
-      final boostedStrings =
-          prefs.getStringList('boosted_product_ids') ?? <String>[];
-      final boostedIds =
-          boostedStrings.map((e) => int.tryParse(e)).whereType<int>().toSet();
+    if (!mounted) return;
 
-      list.sort((a, b) {
-        final aBoosted =
-            a.productId != null && boostedIds.contains(a.productId);
-        final bBoosted =
-            b.productId != null && boostedIds.contains(b.productId);
-        if (aBoosted == bBoosted) return 0;
-        return aBoosted ? -1 : 1;
-      });
+    setState(() {
+      _products = list;
+      _boostedProductIds = boostedIds;
+      _isLoadingProducts = false;
+    });
 
-      if (!mounted) return;
-      setState(() {
-        _products = list;
-        _boostedProductIds = boostedIds;
-        _isLoadingProducts = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _productError = 'Gagal memuat produk UMKM. Coba lagi.';
-        _isLoadingProducts = false;
-      });
-    }
+    print('SETSTATE FINISHED, PRODUCT COUNT: ${_products.length}');
+  } catch (e) {
+    print('ERROR LOAD PRODUCT: $e');
+
+    if (!mounted) return;
+    setState(() {
+      _productError = 'Gagal memuat produk UMKM. Coba lagi.';
+      _isLoadingProducts = false;
+    });
   }
+}
+
 
   void _openSearch(String rawQuery) {
     final query = rawQuery.trim();
@@ -101,6 +116,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    print('BUILD HOME PAGE');
+print('PRODUCT COUNT: ${_products.length}');
+print('IS LOADING: $_isLoadingProducts');
     final user = AuthService.currentUser;
     final orderProvider = Provider.of<OrderProvider>(context);
     final hasPendingOrders =
@@ -378,15 +396,26 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
 
                 _isLoadingProducts
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF124170),
-                          ),
-                        ),
-                      )
-                    : GridView.builder(
+  ? const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: CircularProgressIndicator(
+          color: Color(0xFF124170),
+        ),
+      ),
+    )
+  : _products.isEmpty
+      ? const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              'DEBUG: Produk kosong',
+              style: TextStyle(fontSize: 14),
+            ),
+          ),
+        )
+      : GridView.builder(
+
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _products.length,

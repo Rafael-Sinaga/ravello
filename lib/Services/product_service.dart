@@ -175,25 +175,32 @@ class ProductService {
   // ======================= FETCH PUBLIC =======================
   // ============================================================
 
-  static Future<List<Product>> fetchProducts() async {
-    final response = await http
-        .get(Uri.parse('${ApiConfig.baseUrl}/products'))
-        .timeout(_timeoutDuration);
+static Future<List<Product>> fetchProducts() async {
+  final response = await http
+      .get(Uri.parse('${ApiConfig.baseUrl}/product'))
+      .timeout(_timeoutDuration);
 
-    if (response.statusCode != 200) {
-      throw Exception('Gagal memuat produk.');
-    }
-
-    final decoded = jsonDecode(response.body);
-    final list = decoded is List
-        ? decoded
-        : decoded['products'] ?? decoded['data'] ?? [];
-
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map((e) => Product.fromJson(e))
-        .toList();
+  if (response.statusCode != 200) {
+    throw Exception('Gagal memuat produk.');
   }
+
+  final decoded = jsonDecode(response.body);
+
+  final rawList =
+      decoded['products'] ?? decoded['data'] ?? [];
+
+  final List<Product> products = [];
+
+  for (final item in rawList) {
+    if (item is Map<String, dynamic>) {
+      print('PARSE PRODUCT JSON => $item');
+      products.add(Product.fromJson(item));
+    }
+  }
+
+  return products;
+}
+
 
   // ============================================================
   // ======================= DELETE PRODUCT =====================

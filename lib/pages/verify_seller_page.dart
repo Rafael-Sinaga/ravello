@@ -102,43 +102,54 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
     setState(() => isLoading = true);
 
-    try {
-      final result = await SellerService.registerStore(
-        storeName: nameController.text.trim(),
-        description: storeDescController.text.trim(),
-        address: storeAddressController.text.trim(),
-      );
+try {
+  final result = await SellerService.registerStore(
+    storeName: nameController.text.trim(),
+    description: storeDescController.text.trim(),
+    address: storeAddressController.text.trim(),
+  );
 
-      final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
 
-      if (result['success'] != true) {
-        final msg = (result['message'] ?? '').toString().toLowerCase();
-        final alreadySeller = msg.contains('sudah') || msg.contains('already');
+  if (result['success'] != true) {
+    final msg = (result['message'] ?? '').toString().toLowerCase();
+    final alreadySeller = msg.contains('sudah') || msg.contains('already');
 
-        if (alreadySeller) {
-          await AuthService.setSellerStatus(true);
-          await AuthService.getStoreProfile();
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
-          );
-        }
-
-        setState(() => isLoading = false);
-        return;
-      }
-
+    if (alreadySeller) {
       await AuthService.setSellerStatus(true);
       await AuthService.getStoreProfile();
-
-      setState(() => isLoading = false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
       );
-    } catch (e) {
-      setState(() => isLoading = false);
     }
+
+    setState(() => isLoading = false);
+    return;
+  }
+
+  // =================== INI BAGIAN PENTING ===================
+  final storeId = result['store_id'];
+  if (storeId != null) {
+    await prefs.setInt('store_id', storeId);
+    print("STORE ID DISIMPAN => $storeId");
+  }
+  // ==========================================================
+
+  await AuthService.setSellerStatus(true);
+
+  // ambil profil toko pakai store_id yang BARU
+  await AuthService.getStoreProfile();
+
+  setState(() => isLoading = false);
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
+  );
+} catch (e) {
+  setState(() => isLoading = false);
+}
+
   }
 
   // ================= UI =================

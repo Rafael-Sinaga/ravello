@@ -1,4 +1,3 @@
-// lib/services/seller_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -10,7 +9,7 @@ import 'auth_service.dart';
 class SellerService {
   static const Duration _timeoutDuration = Duration(seconds: 15);
 
-  /// Daftar toko (membuat store baru untuk client yang sedang login)
+  /// ================== REGISTER STORE ==================
   static Future<Map<String, dynamic>> registerStore({
     required String storeName,
     required String description,
@@ -18,106 +17,77 @@ class SellerService {
   }) async {
     try {
       final token = await AuthService.getToken();
-      if (token == null || token.isEmpty) {
+      if (token == null) {
         return {
           'success': false,
-          'message': 'Token tidak tersedia. Silakan login ulang.',
+          'message': 'Session expired. Login ulang.'
         };
       }
 
       final url = Uri.parse('${ApiConfig.baseUrl}/store');
 
-      final response = await http
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'store_name': storeName,
-              'description': description,
-              'address': address,
-            }),
-          )
-          .timeout(_timeoutDuration);
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'store_name': storeName,
+          'description': description,
+          'address': address,
+        }),
+      ).timeout(_timeoutDuration);
 
-      // Deteksi HTML (endpoint salah)
-      final contentType = response.headers['content-type'] ?? '';
-      final bodyText = response.body.trim();
-      if (bodyText.startsWith('<!DOCTYPE html') ||
-          bodyText.startsWith('<html') ||
-          contentType.contains('text/html')) {
+      final body = jsonDecode(res.body);
+
+      if (res.statusCode != 201 || body['success'] != true) {
         return {
           'success': false,
-          'message': 'Server mengembalikan HTML, bukan JSON.',
+          'message': body['message'] ?? 'Gagal daftar toko'
         };
       }
 
-      final body = jsonDecode(response.body);
-
-      final bool ok =
-          body['success'] == true ||
-          response.statusCode == 200 ||
-          response.statusCode == 201;
-
-      if (ok) {
-        // 🔥🔥🔥 INI KUNCI PERBAIKAN 🔥🔥🔥
-        try {
-          final prefs = await SharedPreferences.getInstance();
-
-          // SIMPAN STATUS SELLER
-          await prefs.setBool('isSeller_local', true);
-
-          // SIMPAN STORE ID (WAJIB)
-          if (body['store_id'] != null) {
-            final storeId =
-                int.tryParse(body['store_id'].toString());
-            if (storeId != null) {
-              await prefs.setInt('storeId', storeId);
-              print('REGISTER STORE: storeId disimpan => $storeId');
-            }
-          }
-        } catch (e) {
-          print('REGISTER STORE: gagal simpan prefs => $e');
-        }
-
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Toko berhasil didaftarkan.',
-          'store_id': body['store_id'],
-          'owner_id': body['owner_id'],
-          'raw': body,
-        };
-      }
-
-      final message = body['message'] ??
-          'Gagal mendaftar sebagai penjual.';
-
-      // Kasus user sudah punya toko
-      final lower = message.toLowerCase();
-      if (lower.contains('sudah memiliki toko') ||
-          lower.contains('hanya diperbolehkan')) {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isSeller_local', true);
-        } catch (_) {}
-      }
+      await AuthService.logout();
 
       return {
-        'success': false,
-        'message': message,
-        'raw': body,
-      };
-    } on TimeoutException {
-      return {
-        'success': false,
-        'message': 'Koneksi timeout saat mendaftar toko.',
+        'success': true,
+        'force_logout': true,
+        'message': 'Toko berhasil dibuat. Silakan login ulang.'
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: $e',
+        'message': 'Error: $e'
+      };
+    }
+  }
+
+  /// ================== GET STORE DETAIL ==================
+  /// Update: Menggunakan endpoint /profile agar otomatis mengambil ID dari Token JWT
+  static Future<Map<String, dynamic>> getStoreDetail() async {
+    try {
+      // 1. Ambil token terbaru dari AuthService
+      final token = await AuthService.getToken();
+
+      // 2. GANTI URL: Gunakan /store/profile (Tanpa parameter ID manual)
+      // Karena Backend sekarang sudah membaca ID dari Token
+      final url = Uri.parse('${ApiConfig.baseUrl}/store/profile'); 
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // 👈 WAJIB: Token dikirim di sini
+        },
+      ).timeout(_timeoutDuration);
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal mengambil detail toko',
+        'error': e.toString(),
       };
     }
   }

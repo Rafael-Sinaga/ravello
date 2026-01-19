@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../services/seller_service.dart';
 import '../services/auth_service.dart';
 import 'profile_page.dart';
 import 'manage_products_page.dart';
@@ -42,9 +42,9 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
   String storeName = 'Nama Toko';
   String storeDescription = 'Toko terpercaya di Ravello';
-  String? storeImagePath;
+  String? storeImagePath; 
 
-  SellerMode _sellerMode = SellerMode.online; // ✅ DEFAULT ONLINE
+  SellerMode _sellerMode = SellerMode.online; // ✅ DEFAULT ONLINE 
 
   @override
   void initState() {
@@ -77,37 +77,43 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
 
   /// ===================== STORE DATA =====================
 
-  Future<void> _initDashboard() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storeId = prefs.getInt('storeId');
+Future<void> _initDashboard() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Kita tidak lagi butuh storeId secara eksplisit di sini karena Backend mengambilnya dari JWT
+  final storeId = prefs.getInt('store_id');
 
-    if (storeId != null) {
-      try {
-        final result = await AuthService.getStoreProfile();
-        if (result['success'] == true && mounted) {
-          final data = result['data'];
-          setState(() {
-            storeName =
-                data['storeName'] ?? prefs.getString('storeName') ?? storeName;
-            storeDescription = data['description'] ??
-                prefs.getString('storeDescription') ??
-                storeDescription;
-            storeImagePath =
-                data['imagePath'] ?? prefs.getString('storeImagePath');
-          });
-          return;
-        }
-      } catch (_) {}
+  print('STORE ID FROM PREFS => $storeId');
+
+  try {
+    // 🚨 PERUBAHAN: Panggil tanpa parameter sesuai definisi SellerService terbaru
+    final result = await SellerService.getStoreDetail();
+
+    print('STORE API RESULT => $result');
+
+    if (result['success'] == true && mounted) {
+      final data = result['data'];
+
+      setState(() {
+        // Mengisi data dari hasil query JOIN di backend
+        storeName = data['store_name'] ?? storeName;
+        storeDescription = data['description'] ?? storeDescription;
+      });
+      return;
     }
-
-    if (!mounted) return;
-    setState(() {
-      storeName = prefs.getString('storeName') ?? storeName;
-      storeDescription =
-          prefs.getString('storeDescription') ?? storeDescription;
-      storeImagePath = prefs.getString('storeImagePath');
-    });
+  } catch (e) {
+    print('ERROR LOAD STORE => $e');
   }
+
+  // fallback kalau API gagal atau token tidak mengandung storeId
+  if (!mounted) return;
+  setState(() {
+    storeName = prefs.getString('storeName') ?? storeName;
+    storeDescription =
+        prefs.getString('storeDescription') ?? storeDescription;
+    storeImagePath = prefs.getString('storeImagePath');
+  });
+}
+
 
   Future<void> _openEditStorePage() async {
     final updated = await Navigator.push<bool>(

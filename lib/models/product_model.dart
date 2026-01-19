@@ -92,6 +92,7 @@ class Product {
 
   // ---------- Factory ----------
   factory Product.fromJson(Map<String, dynamic> json) {
+   print('PARSE PRODUCT JSON => $json');
     final name = (json['name'] ??
             json['product_name'] ??
             json['title'] ??
