@@ -2,18 +2,36 @@
 import 'product_model.dart';
 
 class CartItem {
-  /// Produk yang dibeli
+
+  /// ID cart (nullable untuk local)
+  final int? cartId;
+
+  /// Produk
   final Product product;
 
-  /// Ukuran yang dipilih (boleh null untuk flow lama yang belum pakai ukuran)
   String? size;
-
-  /// Jumlah barang
   int quantity;
 
+  /// Constructor LOCAL (untuk UI lama)
   CartItem({
+    this.cartId,
     required this.product,
     this.size,
     this.quantity = 1,
   });
+
+  /// Constructor dari API
+  factory CartItem.fromApi(Map<String, dynamic> json) {
+    return CartItem(
+      cartId: json['cart_id'],
+      product: Product(
+        productId: json['product_id'],
+        name: json['product_name'],
+        description: '', // karena backend belum kirim
+        price: double.parse(json['price'].toString()),
+        imagePath: '', // nanti bisa diperbaiki
+      ),
+      quantity: json['quantity'],
+    );
+  }
 }
