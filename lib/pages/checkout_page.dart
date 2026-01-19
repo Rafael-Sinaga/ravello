@@ -7,6 +7,7 @@ import '../providers/order_provider.dart';
 import '../providers/address_provider.dart';
 import 'order_page.dart';
 import 'edit_address_page.dart';
+import '../services/order_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -22,41 +23,73 @@ class _CheckoutPageState extends State<CheckoutPage> {
   // ==========================================================
   // MODE STARLING (PICKUP)
   // ==========================================================
-  // Untuk sekarang dibuat TRUE agar WORK & bisa dipakai starling
-  // NANTI bisa diganti dari cart / seller / product
   final bool isPickupOrder = true;
 
   int _selectedShipping = 0;
-  int _selectedPayment = 2; // COD default (aman untuk starling)
+  int _selectedPayment = 2; // COD default
 
   double _sliderValue = 0.0;
 
   // ==========================================================
-  // CONFIRM
+  // CONFIRM PAYMENT (BACKEND)
   // ==========================================================
-  void _handleConfirmPayment() {
+  void _handleConfirmPayment() async {
     final cart = Provider.of<CartProvider>(context, listen: false);
 
     if (cart.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tidak ada produk untuk diproses.'),
-          backgroundColor: primaryColor,
+          content: Text('Tidak ada produk'),
         ),
       );
       return;
     }
 
-    // ⚠️ LOGIC LAMA — TIDAK DIUBAH
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    orderProvider.addOrderFromCartItems(cart.items);
+    final orderItems = cart.items
+        .map((c) => {
+              "product_id": c.product.productId,
+              "quantity": c.quantity
+            })
+        .toList();
 
-    cart.clearCart();
+    try {
+      final result = await OrderService.createOrder(
+        orderItems: orderItems,
+        paymentMethod: "COD",
+        shippingAddress: "Pickup",
+      );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const OrderPage()),
-    );
+      if (result['success']) {
+        cart.clearCart();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OrderPage()),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pesanan berhasil dibuat!'),
+            backgroundColor: primaryColor,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(result['message'] ?? 'Gagal membuat pesanan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // ==========================================================
@@ -117,7 +150,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   // ==========================================================
-  // IMPACT CARD
+  // IMPACT
   // ==========================================================
   Widget _buildImpactCard() {
     return Container(
@@ -128,7 +161,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
       child: const Row(
         children: [
-          Icon(Icons.storefront_rounded, color: primaryColor, size: 26),
+          Icon(Icons.storefront_rounded,
+              color: primaryColor, size: 26),
           SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -156,7 +190,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
     }
 
-    final addr = Provider.of<AddressProvider>(context).address;
+    final addr =
+        Provider.of<AddressProvider>(context).address;
 
     return _card(
       title: 'Alamat Pengiriman',
@@ -165,7 +200,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const EditAddressPage()),
+            MaterialPageRoute(
+                builder: (_) => const EditAddressPage()),
           );
         },
         child: const Text(
@@ -212,8 +248,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             value: i,
             groupValue: _selectedShipping,
             activeColor: primaryColor,
-            title: Text(methods[i], style: const TextStyle(fontSize: 12)),
-            onChanged: (v) => setState(() => _selectedShipping = v ?? 0),
+            title: Text(methods[i],
+                style: const TextStyle(fontSize: 12)),
+            onChanged: (v) =>
+                setState(() => _selectedShipping = v ?? 0),
           );
         }),
       ),
@@ -245,8 +283,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             value: i,
             groupValue: _selectedPayment,
             activeColor: primaryColor,
-            title: Text(methods[i], style: const TextStyle(fontSize: 12)),
-            onChanged: (v) => setState(() => _selectedPayment = v ?? 0),
+            title: Text(methods[i],
+                style: const TextStyle(fontSize: 12)),
+            onChanged: (v) =>
+                setState(() => _selectedPayment = v ?? 0),
           );
         }),
       ),
@@ -263,7 +303,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Column(
         children: cart.items.map((ci) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
                 Expanded(
@@ -292,10 +333,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   // ==========================================================
   Widget _buildBottomConfirm(CartProvider cart) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-      decoration: const BoxDecoration(color: Colors.white),
+      padding:
+          const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      decoration:
+          const BoxDecoration(color: Colors.white),
       child: GestureDetector(
-        onHorizontalDragEnd: (_) => _handleConfirmPayment(),
+        onHorizontalDragEnd: (_) =>
+            _handleConfirmPayment(),
         child: Container(
           height: 48,
           alignment: Alignment.center,
@@ -305,7 +349,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           child: const Text(
             'Geser untuk membantu penjual memproses pesanan',
-            style: TextStyle(fontSize: 12, color: Colors.white),
+            style: TextStyle(
+                fontSize: 12, color: Colors.white),
           ),
         ),
       ),
@@ -326,14 +371,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.withOpacity(0.18)),
+        border:
+            Border.all(color: Colors.grey.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: primaryColor, size: 20),
+              Icon(icon,
+                  color: primaryColor, size: 20),
               const SizedBox(width: 6),
               Text(
                 title,
