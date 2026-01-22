@@ -33,10 +33,18 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => AddressProvider()),
-        // Provider baru untuk polling / sinkron order backend
-        ChangeNotifierProvider(create: (_) => OrderSyncProvider()),
+
+ChangeNotifierProvider(create: (_) => OrderProvider()),
+
+ChangeNotifierProvider(
+  create: (ctx) => OrderSyncProvider(
+    onSyncToApp: (list) {
+      ctx.read<OrderProvider>().setOrders(list);
+    },
+  ),
+),
+
       ],
       child: const RavelloApp(),
     ),

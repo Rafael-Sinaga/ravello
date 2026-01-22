@@ -229,22 +229,45 @@ class _OrderPageState extends State<OrderPage> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: firstImage.isNotEmpty
-                                      ? Image.asset(
-                                          firstImage,
-                                          width: 60,
-                                          height: 60,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          width: 60,
-                                          height: 60,
-                                          color: const Color(0xFFF3F4F6),
-                                          child: const Icon(Icons.image_not_supported),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // NAMA BARANG
+                                      Text(
+                                        items.first.product.name,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: primaryColor,
                                         ),
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      // NAMA TOKO
+                                      Text(
+                                        items.first.product.storeName ?? 'Toko',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF6F7A74),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      // QTY
+                                      Text(
+                                        'Qty: $totalQty',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF6F7A74),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(

@@ -3,10 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../services/order_service.dart';
+import '../models/app_order.dart';   // AppOrder YANG BENAR
+
 
 /// Provider ini hanya menyimpan list BackendOrder dari server dan polling.
 /// Ia juga menyediakan event callback supaya UI / OrderProvider lama bisa sinkron.
 class OrderSyncProvider with ChangeNotifier {
+  final void Function(List<AppOrder>)? onSyncToApp;
+
+  OrderSyncProvider({this.onSyncToApp});
+
   List<BackendOrder> _orders = [];
   Timer? _pollTimer;
   bool _loading = false;
@@ -39,10 +45,13 @@ class OrderSyncProvider with ChangeNotifier {
       final fetched = await OrderService.fetchOrders(role: role, userId: userId);
       final changed = _hasChanges(_orders, fetched);
       _orders = fetched;
-      if (changed) {
-        // notify listeners agar UI dapat bereaksi (snackbar/banner)
-        notifyListeners();
+      // 🔥 PUSH KE ORDERPROVIDER
+      if (onSyncToApp != null) {
+        final appOrders = fetched.map((e) => e.toAppOrder()).toList();
+
+        onSyncToApp!(appOrders);
       }
+
     } catch (e) {
       // optionally log error
       debugPrint('OrderSyncProvider.refresh error: $e');
