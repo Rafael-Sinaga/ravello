@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'register_page.dart';
 import 'home_page.dart';
-import 'forgot_password.dart'; // <-- import halaman forgot password
+import 'forgot_password.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,30 +18,43 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
 
   Future<void> handleLogin() async {
-    setState(() => isLoading = true);
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    // ✅ Tetap pakai backend yang sama
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email dan kata sandi wajib diisi.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
     final result = await AuthService.login(email, password);
 
     setState(() => isLoading = false);
 
     if (result['success'] == true) {
-      print('Login berhasil! User saat ini: ${AuthService.currentUser?.name}');
-      print('Response data: ${result['data']}');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login berhasil!')),
-      );
-
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } else {
+      final message =
+          result['message']?.toString().isNotEmpty == true
+              ? result['message'].toString()
+              : 'Email atau kata sandi salah.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login gagal: ${result['message']}')),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -49,10 +62,6 @@ class _LoginPageState extends State<LoginPage> {
   InputDecoration _inputStyle(String hint, {Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(
-        fontFamily: 'Poppins',
-        color: Color(0xFF9AA7AB),
-      ),
       filled: true,
       fillColor: const Color(0xFFF8F9FA),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -80,7 +89,6 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // 🔆 Background jauh lebih terang, masih nuansa biru Ravello
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -98,51 +106,48 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo + branding
+                  /// ===== LOGO & TITLE =====
                   Column(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: Image.asset(
-                          'assets/images/ravello_logo.png',
-                          height: 60,
+                        child: const Icon(
+                          Icons.storefront,
+                          size: 48,
+                          color: primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
                       const Text(
                         'Ravello Market',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
                           fontSize: 20,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: primaryColor,
-                          letterSpacing: 0.5,
                         ),
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'Belanja dan kelola tokomu\ndalam satu genggaman.',
-                        textAlign: TextAlign.center,
+                        'Masuk untuk mulai berbelanja',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
                           fontSize: 12,
-                          color: Color(0xFF58727C),
+                          color: Colors.grey,
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-                  // Card utama form login
+                  /// ===== CARD LOGIN =====
                   Container(
                     width: double.infinity,
                     constraints: const BoxConstraints(maxWidth: 420),
-                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
@@ -157,72 +162,38 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Heading
                         const Text(
                           'Masuk ke akunmu',
                           style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: primaryColor,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Gunakan email dan kata sandi yang sudah terdaftar.',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: Color(0xFF8EA0A7),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Label Email
-                        const Text(
-                          'Email / Nomor Telepon',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF273E47),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Field Email
-                        TextField(
-                          controller: emailController,
-                          decoration: _inputStyle('contoh@mail.com'),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
                         const SizedBox(height: 16),
 
-                        // Label Password
-                        const Text(
-                          'Kata Sandi',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF273E47),
-                          ),
+                        const Text('Email'),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: _inputStyle('contoh@mail.com'),
                         ),
-                        const SizedBox(height: 8),
 
-                        // Field Password + toggle visibility
+                        const SizedBox(height: 14),
+
+                        const Text('Kata Sandi'),
+                        const SizedBox(height: 6),
                         TextField(
                           controller: passwordController,
                           obscureText: _obscurePassword,
                           decoration: _inputStyle(
-                            'Masukkan kata sandi anda',
+                            'Masukkan kata sandi',
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                size: 20,
-                                color: const Color(0xFF9AA7AB),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -235,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 8),
 
-                        // Lupa sandi
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -243,30 +213,20 @@ class _LoginPageState extends State<LoginPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ForgotPasswordPage(),
+                                  builder: (_) =>
+                                      const ForgotPasswordPage(),
                                 ),
                               );
                             },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(0, 0),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
                             child: const Text(
-                              'Lupa sandi?',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: primaryColor,
-                              ),
+                              'Lupa kata sandi?',
+                              style: TextStyle(color: primaryColor),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
 
-                        // Tombol Masuk
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -278,12 +238,11 @@ class _LoginPageState extends State<LoginPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              elevation: 3,
                             ),
                             child: isLoading
                                 ? const SizedBox(
-                                    height: 18,
                                     width: 18,
+                                    height: 18,
                                     child: CircularProgressIndicator(
                                       color: Colors.white,
                                       strokeWidth: 2,
@@ -292,74 +251,31 @@ class _LoginPageState extends State<LoginPage> {
                                 : const Text(
                                     'Masuk',
                                     style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Divider halus
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 1,
-                                color: const Color(0xFFE6E9EB),
-                              ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                'atau',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 11,
-                                  color: Color(0xFF9AA7AB),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Container(
-                                height: 1,
-                                color: const Color(0xFFE6E9EB),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Tombol ke Register
-                        Center(
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterPage(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Belum punya akun? Daftar di sini',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: primaryColor,
-                              ),
-                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterPage(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Belum punya akun? Daftar',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                  ),
                 ],
               ),
             ),

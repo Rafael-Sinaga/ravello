@@ -20,12 +20,11 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController nikController = TextEditingController();
-
   final TextEditingController storeDescController = TextEditingController();
   final TextEditingController storeAddressController = TextEditingController();
-
   final TextEditingController bankAccountController = TextEditingController();
   final TextEditingController bankHolderController = TextEditingController();
+
   String? selectedBank;
 
   final List<String> bankList = [
@@ -76,7 +75,6 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
     }
   }
 
-  // ================= SUBMIT (TIDAK DIUBAH) =================
   Future<void> _submitVerification() async {
     if (!agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,57 +100,50 @@ class _VerifySellerPageState extends State<VerifySellerPage> {
 
     setState(() => isLoading = true);
 
-try {
-  final result = await SellerService.registerStore(
-    storeName: nameController.text.trim(),
-    description: storeDescController.text.trim(),
-    address: storeAddressController.text.trim(),
-  );
+    try {
+      final result = await SellerService.registerStore(
+        storeName: nameController.text.trim(),
+        description: storeDescController.text.trim(),
+        address: storeAddressController.text.trim(),
+      );
 
-  final prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
 
-  if (result['success'] != true) {
-    final msg = (result['message'] ?? '').toString().toLowerCase();
-    final alreadySeller = msg.contains('sudah') || msg.contains('already');
+      if (result['success'] != true) {
+        final msg = (result['message'] ?? '').toString().toLowerCase();
+        final alreadySeller = msg.contains('sudah') || msg.contains('already');
 
-    if (alreadySeller) {
+        if (alreadySeller) {
+          await AuthService.setSellerStatus(true);
+          await AuthService.getStoreProfile();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
+          );
+        }
+
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final storeId = result['store_id'];
+      if (storeId != null) {
+        await prefs.setInt('store_id', storeId);
+      }
+
       await AuthService.setSellerStatus(true);
       await AuthService.getStoreProfile();
+
+      setState(() => isLoading = false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
       );
+    } catch (e) {
+      setState(() => isLoading = false);
     }
-
-    setState(() => isLoading = false);
-    return;
   }
 
-  // =================== INI BAGIAN PENTING ===================
-  final storeId = result['store_id'];
-  if (storeId != null) {
-    await prefs.setInt('store_id', storeId);
-    print("STORE ID DISIMPAN => $storeId");
-  }
-  // ==========================================================
-
-  await AuthService.setSellerStatus(true);
-
-  // ambil profil toko pakai store_id yang BARU
-  await AuthService.getStoreProfile();
-
-  setState(() => isLoading = false);
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const SellerDashboardPage()),
-  );
-} catch (e) {
-  setState(() => isLoading = false);
-}
-
-  }
-
-  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF124170);
@@ -174,7 +165,6 @@ try {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== NARASI BARU (DITAMBAHKAN, TIDAK GANTI FORM) =====
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -189,15 +179,36 @@ try {
                 ),
                 const SizedBox(height: 16),
 
-                // ===== SELURUH FORM ASLI (TIDAK DIUBAH SATUPUN) =====
-                // 👉 ISINYA PERSIS SAMA DENGAN KODE LU
-                // 👉 TIDAK ADA YANG DIHAPUS / DIPINDAH
-                // 👉 (dipersingkat di sini demi kejelasan jawaban)
+                // ================== TAMBAHAN WAJIB ==================
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: agreeTerms,
+                      onChanged: (value) {
+                        setState(() => agreeTerms = value ?? false);
+                      },
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => agreeTerms = !agreeTerms);
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Saya menyetujui Syarat & Ketentuan serta Kebijakan Privasi.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
 
-          // ===== BOTTOM BAR =====
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(

@@ -39,16 +39,14 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final storeId = prefs.getInt('storeId');
+      final storeId = prefs.getInt('store_id'); // ✅ FIX
 
       if (storeId == null) {
         throw Exception('Store ID tidak ditemukan');
       }
 
-      // 🔥 Ambil SEMUA produk (sudah terbukti jalan)
       final allProducts = await ProductService.fetchProducts();
 
-      // 🔥 Filter produk milik seller ini
       final myProducts = allProducts.where((p) {
         if (p.storeId == null) return false;
         return p.storeId == storeId;
@@ -207,8 +205,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                 const SizedBox(height: 2),
                 Text(
                   'Rp ${p.price.toStringAsFixed(0)} • Stok ${p.stock}',
-                  style:
-                      const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -275,7 +272,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
@@ -315,7 +311,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               ),
                       ),
                     ),
-
                     const SizedBox(height: 12),
                     TextField(
                       controller: nameController,
@@ -341,13 +336,13 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                       decoration:
                           inputDec('Deskripsi', 'Ceritakan produkmu'),
                     ),
-
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () async {
                         if (pickedImage == null) return;
 
-                        await ProductService.createProduct(
+                        final result =
+                            await ProductService.createProduct(
                           name: nameController.text.trim(),
                           description: descController.text.trim(),
                           price:
@@ -359,8 +354,22 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                         );
 
                         if (!mounted) return;
-                        Navigator.pop(context);
-                        await _loadMyProducts();
+
+                        if (result['success'] == true) {
+                          Navigator.pop(context);
+                          await _loadMyProducts();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Produk berhasil ditambahkan')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(result['message'] ??
+                                    'Gagal menambahkan produk')),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
