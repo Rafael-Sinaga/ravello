@@ -5,10 +5,19 @@ import '../models/app_order.dart';
 import '../models/cart_model.dart';
 import '../models/product_model.dart';
 
+
 class OrderProvider with ChangeNotifier {
   final List<AppOrder> _orders = [];
 
   List<AppOrder> get orders => List.unmodifiable(_orders);
+void setOrders(List<AppOrder> newOrders) {
+  _orders
+    ..clear()
+    ..addAll(newOrders);
+  notifyListeners();
+}
+
+
 
   /// Add single-product legacy (keep for compatibility)
   void addOrder(Product product, {int quantity = 1}) {

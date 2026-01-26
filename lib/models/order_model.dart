@@ -1,21 +1,22 @@
 // lib/models/order_model.dart
 // Model order defensif — bisa dipakai untuk komunikasi dengan backend (BackendOrder)
 // dan juga sebagai model aplikasi (AppOrder) yang dipakai OrderProvider / UI.
-
+import 'app_order.dart';
 import 'dart:convert';
-
+import 'order_item.dart';
 import 'product_model.dart';
+import 'app_order.dart'; // ini ada OrderStatus
 
 /// Status order yang dipakai di UI / provider.
 /// Nama enum disesuaikan dengan yang sering dipakai di codebase:
 /// - belumBayar, diproses, dikirim, diterima, selesai
-enum OrderStatus {
+/*enum OrderStatus {
   belumBayar,
   diproses,
   dikirim,
   diterima,
   selesai,
-}
+} */
 
 /// Parser helper: ubah string/number date ke DateTime dengan fallback.
 DateTime _parseDate(dynamic v) {
@@ -100,6 +101,8 @@ class BackendOrder {
     required this.createdAt,
   });
 
+    OrderStatus get parsedStatus => _parseStatus(status);
+
   factory BackendOrder.fromJson(Map<String, dynamic> json) {
     // beberapa backend bungkus data di field 'data' / 'order'
     final Map<String, dynamic> root = <String, dynamic>{}..addAll(json);
@@ -110,7 +113,8 @@ class BackendOrder {
       } catch (_) {}
     }
 
-    String id = (root['id'] ?? root['order_id'] ?? root['invoice'] ?? '').toString();
+    String id = root['order_id'].toString();
+
     if (id.isEmpty) {
       // coba cari id di nested object
       final maybe = root['order'] ?? root['data'];
@@ -137,12 +141,18 @@ class BackendOrder {
             root['image_path'] ??
             root['thumbnail'] ??
             '')
-        .toString();
+        .toString(); 
 
-    final price = _parseInt(root['price'] ?? root['total'] ?? root['amount'] ?? 0);
-    final quantity = _parseInt(root['quantity'] ?? root['qty'] ?? 1);
+final price = _parseInt(
+  root['total_price'] ?? 0   // ← FIELD BACKEND ASLI
+);
 
-    final createdAt = _parseDate(root['created_at'] ?? root['createdAt'] ?? root['waktu'] ?? root['timestamp']);
+final quantity = 1; // backend tidak kirim detail item
+
+final createdAt = _parseDate(
+  root['order_date']        // ← FIELD BACKEND ASLI
+);
+
 
     return BackendOrder(
       id: id.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : id,
@@ -168,42 +178,37 @@ class BackendOrder {
   }
 
   /// Bantu konversi ke AppOrder (butuh Product, kalau gak tersedia buat Product ringan)
-  AppOrder toAppOrder({Product? product, String? invoicePrefix}) {
-    Product finalProduct;
-    if (product != null) {
-      finalProduct = product;
-    } else {
-      // bikin Product ringkas supaya UI bisa tetap pakai AppOrder.product
-      finalProduct = Product(
-        productId: null,
-        storeId: null,
-        name: productName,
-        description: '',
-        price: price,
-        discount: null,
-        imagePath: productImage,
-        stock: 0,
-        categoryId: null,
-        storeName: null,
-        sizes: null,
-      );
-    }
+AppOrder toAppOrder() {
+  final item = OrderItem(
+    product: Product(
+      productId: null,
+      storeId: null,
+      name: productName,
+      description: '',
+      price: price,
+      discount: null,
+      imagePath: productImage,
+      stock: 0,
+      categoryId: null,
+      storeName: null,
+      sizes: null,
+    ),
+    quantity: quantity,
+    unitPrice: price,
+  );
 
-    final String orderId = id;
-    final OrderStatus os = _parseStatus(status);
-
-    return AppOrder(
-      id: invoicePrefix != null ? '$invoicePrefix-$orderId' : orderId,
-      product: finalProduct,
-      status: os,
-      createdAt: createdAt,
-    );
-  }
+  return AppOrder(
+    id: id,
+    items: [item],
+    status: _parseStatus(status),
+    createdAt: createdAt,
+  );
 }
+
 
 /// Model aplikasi yang dipakai OrderProvider (AppOrder).
 /// Struktur ini mengikuti yang sudah ada di OrderProvider contoh sebelumnya.
-class AppOrder {
+/*class AppOrder {
   final String id;
   final Product product;
   final OrderStatus status;
@@ -286,5 +291,5 @@ class AppOrder {
       status: status,
       createdAt: createdAt,
     );
-  }
+  }*/
 }

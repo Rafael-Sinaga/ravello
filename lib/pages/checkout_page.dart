@@ -1,7 +1,7 @@
 // lib/pages/checkout_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../providers/order_sync_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/address_provider.dart';
@@ -59,21 +59,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
         shippingAddress: "Pickup",
       );
 
-      if (result['success']) {
-        cart.clearCart();
+if (result['success']) {
+  final orderProvider =
+      context.read<OrderProvider>();
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OrderPage()),
-        );
+  // 🔥 MASUKKAN ORDER KE STATE
+  orderProvider.addOrderFromCartItems(cart.items);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pesanan berhasil dibuat!'),
-            backgroundColor: primaryColor,
-          ),
-        );
-      } else {
+  cart.clearCart();
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const OrderPage()),
+  );
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Pesanan berhasil dibuat!'),
+      backgroundColor: primaryColor,
+    ),
+  );
+}
+ else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
