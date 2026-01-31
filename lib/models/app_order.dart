@@ -14,12 +14,14 @@ class AppOrder {
   final List<OrderItem> items;
   final OrderStatus status;
   final DateTime createdAt;
+  final String paymentMethod;
 
   AppOrder({
     required this.id,
     required this.items,
     required this.status,
     required this.createdAt,
+    required this.paymentMethod,
   });
 
   AppOrder copyWith({
@@ -27,12 +29,14 @@ class AppOrder {
     List<OrderItem>? items,
     OrderStatus? status,
     DateTime? createdAt,
+    String? paymentMethod,
   }) {
     return AppOrder(
       id: id ?? this.id,
       items: items ?? List<OrderItem>.from(this.items),
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 
@@ -67,6 +71,7 @@ class AppOrder {
       items: items,
       status: OrderStatus.values[statusIndex.clamp(0, OrderStatus.values.length - 1)],
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      paymentMethod: json['paymentMethod'] ?? 'COD',
     );
   }
 }

@@ -202,6 +202,7 @@ AppOrder toAppOrder() {
     items: [item],
     status: _parseStatus(status),
     createdAt: createdAt,
+    paymentMethod: 'COD',
   );
 }
 

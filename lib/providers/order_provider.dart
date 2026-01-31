@@ -5,39 +5,25 @@ import '../models/app_order.dart';
 import '../models/cart_model.dart';
 import '../models/product_model.dart';
 
-
 class OrderProvider with ChangeNotifier {
   final List<AppOrder> _orders = [];
 
   List<AppOrder> get orders => List.unmodifiable(_orders);
-void setOrders(List<AppOrder> newOrders) {
-  _orders
-    ..clear()
-    ..addAll(newOrders);
-  notifyListeners();
-}
 
-
-
-  /// Add single-product legacy (keep for compatibility)
-  void addOrder(Product product, {int quantity = 1}) {
-    final items = <OrderItem>[
-      OrderItem(product: product, quantity: quantity, unitPrice: product.price),
-    ];
-
-    final newOrder = AppOrder(
-      id: 'INV-${DateTime.now().millisecondsSinceEpoch}',
-      items: items,
-      status: OrderStatus.belumBayar,
-      createdAt: DateTime.now(),
-    );
-
-    _orders.add(newOrder);
+  void setOrders(List<AppOrder> newOrders) {
+    _orders
+      ..clear()
+      ..addAll(newOrders);
     notifyListeners();
   }
 
-  /// NEW: create one order from a list of CartItem (checkout)
-  void addOrderFromCartItems(List<CartItem> cartItems) {
+  // ============================
+  // CHECKOUT → CREATE ORDER
+  // ============================
+  void addOrderFromCartItems(
+    List<CartItem> cartItems, {
+    required String paymentMethod,
+  }) {
     final items = cartItems.map((c) {
       return OrderItem(
         product: c.product,
@@ -48,18 +34,25 @@ void setOrders(List<AppOrder> newOrders) {
 
     if (items.isEmpty) return;
 
+    final isCOD = paymentMethod.toUpperCase() == 'COD';
+
     final newOrder = AppOrder(
       id: 'INV-${DateTime.now().millisecondsSinceEpoch}',
       items: items,
-      status: OrderStatus.belumBayar,
+      status: isCOD
+          ? OrderStatus.dikirim // ✅ COD langsung dikirim
+          : OrderStatus.belumBayar,
       createdAt: DateTime.now(),
+      paymentMethod: paymentMethod,
     );
 
     _orders.add(newOrder);
     notifyListeners();
   }
 
-  // update status by id
+  // ============================
+  // UPDATE STATUS
+  // ============================
   void updateStatusById(String id, OrderStatus newStatus) {
     final idx = _orders.indexWhere((o) => o.id == id);
     if (idx == -1) return;
@@ -93,10 +86,13 @@ void setOrders(List<AppOrder> newOrders) {
     }
   }
 
-  // Return order that contains given product (fallback create temp order)
   AppOrder? orderContainingProduct(Product product) {
     try {
-      return _orders.firstWhere((o) => o.items.any((it) => it.product.productId == product.productId));
+      return _orders.firstWhere(
+        (o) => o.items.any(
+          (it) => it.product.productId == product.productId,
+        ),
+      );
     } catch (_) {
       return null;
     }

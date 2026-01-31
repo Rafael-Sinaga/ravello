@@ -1,13 +1,12 @@
 // lib/pages/checkout_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/order_sync_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/address_provider.dart';
+import '../services/order_service.dart';
 import 'order_page.dart';
 import 'edit_address_page.dart';
-import '../services/order_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -21,26 +20,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
   static const Color backgroundColor = Color(0xFFF8FBFD);
 
   // ==========================================================
-  // MODE STARLING (PICKUP)
+  // MODE PICKUP
   // ==========================================================
   final bool isPickupOrder = true;
 
   int _selectedShipping = 0;
-  int _selectedPayment = 2; // COD default
-
+  int _selectedPayment = -1; // 🔒 WAJIB pilih payment
   double _sliderValue = 0.0;
 
+  bool get _isPaymentSelected => _selectedPayment >= 0;
+
   // ==========================================================
-  // CONFIRM PAYMENT (BACKEND)
+  // CONFIRM PAYMENT
   // ==========================================================
-  void _handleConfirmPayment() async {
-    final cart = Provider.of<CartProvider>(context, listen: false);
+  Future<void> _handleConfirmPayment() async {
+    final cart = context.read<CartProvider>();
 
     if (cart.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak ada produk'),
-        ),
+        const SnackBar(content: Text('Tidak ada produk')),
       );
       return;
     }
@@ -48,7 +46,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final orderItems = cart.items
         .map((c) => {
               "product_id": c.product.productId,
-              "quantity": c.quantity
+              "quantity": c.quantity,
             })
         .toList();
 
@@ -56,35 +54,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final result = await OrderService.createOrder(
         orderItems: orderItems,
         paymentMethod: "COD",
-        shippingAddress: "Pickup",
+        shippingAddress: isPickupOrder ? "Pickup" : "Delivery",
       );
 
-if (result['success']) {
-  final orderProvider =
-      context.read<OrderProvider>();
+      if (result['success'] == true) {
+        context.read<OrderProvider>().addOrderFromCartItems(cart.items, paymentMethod: 'COD',);
+        cart.clearCart();
 
-  // 🔥 MASUKKAN ORDER KE STATE
-  orderProvider.addOrderFromCartItems(cart.items);
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OrderPage()),
+        );
 
-  cart.clearCart();
-
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const OrderPage()),
-  );
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Pesanan berhasil dibuat!'),
-      backgroundColor: primaryColor,
-    ),
-  );
-}
- else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pesanan berhasil dibuat!'),
+            backgroundColor: primaryColor,
+          ),
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(result['message'] ?? 'Gagal membuat pesanan'),
+            content: Text(result['message'] ?? 'Gagal membuat pesanan'),
             backgroundColor: Colors.red,
           ),
         );
@@ -104,7 +96,7 @@ if (result['success']) {
   // ==========================================================
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
+    final cart = context.watch<CartProvider>();
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -125,12 +117,7 @@ if (result['success']) {
         ),
       ),
       body: cart.items.isEmpty
-          ? const Center(
-              child: Text(
-                'Tidak ada pesanan yang sedang diproses.',
-                textAlign: TextAlign.center,
-              ),
-            )
+          ? const Center(child: Text('Tidak ada pesanan.'))
           : Column(
               children: [
                 Expanded(
@@ -146,11 +133,11 @@ if (result['success']) {
                       _buildPaymentCard(),
                       const SizedBox(height: 14),
                       _buildOrderSummaryCard(cart),
-                      const SizedBox(height: 90),
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
-                _buildBottomConfirm(cart),
+                _buildBottomConfirm(),
               ],
             ),
     );
@@ -160,24 +147,13 @@ if (result['success']) {
   // IMPACT
   // ==========================================================
   Widget _buildImpactCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5EDFF),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.storefront_rounded,
-              color: primaryColor, size: 26),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Pesanan akan diteruskan langsung ke penjual.\nUsaha kecil mulai menyiapkan pesanan setelah kamu konfirmasi.',
-              style: TextStyle(fontSize: 12, height: 1.4),
-            ),
-          ),
-        ],
+    return _card(
+      title: 'Dukung Usaha Lokal',
+      icon: Icons.storefront_rounded,
+      child: const Text(
+        'Pesanan akan diteruskan langsung ke penjual.\n'
+        'Usaha kecil mulai menyiapkan pesanan setelah kamu konfirmasi.',
+        style: TextStyle(fontSize: 12, height: 1.4),
       ),
     );
   }
@@ -191,30 +167,24 @@ if (result['success']) {
         title: 'Pengambilan Pesanan',
         icon: Icons.storefront_outlined,
         child: const Text(
-          'Pesanan diambil langsung di lokasi penjual.\nAlamat pengiriman tidak diperlukan.',
+          'Pesanan diambil langsung di lokasi penjual.\n'
+          'Alamat pengiriman tidak diperlukan.',
           style: TextStyle(fontSize: 12, height: 1.4),
         ),
       );
     }
 
-    final addr =
-        Provider.of<AddressProvider>(context).address;
+    final addr = context.watch<AddressProvider>().address;
 
     return _card(
       title: 'Alamat Pengiriman',
       icon: Icons.place_outlined,
       trailing: TextButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const EditAddressPage()),
-          );
-        },
-        child: const Text(
-          'Ubah',
-          style: TextStyle(fontSize: 11, color: primaryColor),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EditAddressPage()),
         ),
+        child: const Text('Ubah', style: TextStyle(fontSize: 11)),
       ),
       child: Text(
         '${addr.name}\n${addr.address}\n${addr.city}\nTelp: ${addr.phone}',
@@ -227,40 +197,12 @@ if (result['success']) {
   // SHIPPING
   // ==========================================================
   Widget _buildShippingCard() {
-    if (isPickupOrder) {
-      return _card(
-        title: 'Metode Pengiriman',
-        icon: Icons.local_shipping_outlined,
-        child: const Text(
-          'Tidak menggunakan jasa pengiriman.\nPesanan diambil langsung.',
-          style: TextStyle(fontSize: 12, height: 1.4),
-        ),
-      );
-    }
-
-    final methods = [
-      'JNE Reguler • 2–4 hari',
-      'J&T Express • 1–3 hari',
-      'GoSend Instant • ±1 jam',
-    ];
-
     return _card(
-      title: 'Pengiriman',
+      title: 'Metode Pengiriman',
       icon: Icons.local_shipping_outlined,
-      child: Column(
-        children: List.generate(methods.length, (i) {
-          return RadioListTile<int>(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            value: i,
-            groupValue: _selectedShipping,
-            activeColor: primaryColor,
-            title: Text(methods[i],
-                style: const TextStyle(fontSize: 12)),
-            onChanged: (v) =>
-                setState(() => _selectedShipping = v ?? 0),
-          );
-        }),
+      child: const Text(
+        'Tidak menggunakan jasa pengiriman.\nPesanan diambil langsung.',
+        style: TextStyle(fontSize: 12, height: 1.4),
       ),
     );
   }
@@ -269,15 +211,7 @@ if (result['success']) {
   // PAYMENT
   // ==========================================================
   Widget _buildPaymentCard() {
-    final methods = isPickupOrder
-        ? ['COD (Bayar di Tempat)']
-        : [
-            'PayLater',
-            'DANA',
-            'COD (Bayar di Tempat)',
-            'OVO',
-            'Transfer Bank',
-          ];
+    final methods = ['COD (Bayar di Tempat)'];
 
     return _card(
       title: 'Metode Pembayaran',
@@ -290,10 +224,8 @@ if (result['success']) {
             value: i,
             groupValue: _selectedPayment,
             activeColor: primaryColor,
-            title: Text(methods[i],
-                style: const TextStyle(fontSize: 12)),
-            onChanged: (v) =>
-                setState(() => _selectedPayment = v ?? 0),
+            title: Text(methods[i], style: const TextStyle(fontSize: 12)),
+            onChanged: (v) => setState(() => _selectedPayment = v ?? -1),
           );
         }),
       ),
@@ -310,8 +242,7 @@ if (result['success']) {
       child: Column(
         children: cart.items.map((ci) {
           return Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
                 Expanded(
@@ -336,36 +267,116 @@ if (result['success']) {
   }
 
   // ==========================================================
-  // BOTTOM
+  // SLIDER CHECKOUT (FINAL)
   // ==========================================================
-  Widget _buildBottomConfirm(CartProvider cart) {
+  Widget _buildBottomConfirm() {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    const double horizontalPadding = 16;
+    const double handleSize = 56;
+
+    final double trackWidth =
+        screenWidth - (horizontalPadding * 2);
+    final double maxSlide = trackWidth - handleSize;
+
     return Container(
-      padding:
-          const EdgeInsets.fromLTRB(16, 12, 16, 18),
-      decoration:
-          const BoxDecoration(color: Colors.white),
-      child: GestureDetector(
-        onHorizontalDragEnd: (_) =>
-            _handleConfirmPayment(),
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: primaryColor,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: const Text(
-            'Geser untuk membantu penjual memproses pesanan',
-            style: TextStyle(
-                fontSize: 12, color: Colors.white),
-          ),
+      padding: const EdgeInsets.fromLTRB(
+          horizontalPadding, 12, horizontalPadding, 18),
+      color: Colors.white,
+      child: Container(
+        height: 58,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: _isPaymentSelected
+              ? const Color(0xFFE6EEF6)
+              : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Stack(
+          children: [
+            // ================= TEKS (AMAN, TIDAK KETUTUP) =================
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: handleSize + 12,
+                ),
+                child: Center(
+                  child: Text(
+                    _isPaymentSelected
+                        ? 'Geser untuk membantu penjual memproses pesanan'
+                        : 'Pilih metode pembayaran terlebih dahulu',
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      color: _isPaymentSelected
+                          ? Colors.black87
+                          : Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ================= HANDLE BULAT =================
+            Positioned(
+              left: _sliderValue,
+              top: 1,
+              bottom: 1,
+              child: GestureDetector(
+                onHorizontalDragUpdate: _isPaymentSelected
+                    ? (details) {
+                        setState(() {
+                          _sliderValue += details.delta.dx;
+                          _sliderValue =
+                              _sliderValue.clamp(0.0, maxSlide);
+                        });
+                      }
+                    : null,
+                onHorizontalDragEnd: _isPaymentSelected
+                    ? (_) {
+                        if (_sliderValue > maxSlide * 0.85) {
+                          _handleConfirmPayment();
+                        } else {
+                          setState(() => _sliderValue = 0);
+                        }
+                      }
+                    : null,
+                child: Container(
+                  width: handleSize,
+                  height: handleSize,
+                  decoration: BoxDecoration(
+                    color: _isPaymentSelected
+                        ? primaryColor
+                        : Colors.grey,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.18),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   // ==========================================================
-  // CARD
+  // CARD HELPER
   // ==========================================================
   Widget _card({
     required String title,
@@ -378,16 +389,14 @@ if (result['success']) {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border:
-            Border.all(color: Colors.grey.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.withOpacity(0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon,
-                  color: primaryColor, size: 20),
+              Icon(icon, color: primaryColor, size: 20),
               const SizedBox(width: 6),
               Text(
                 title,

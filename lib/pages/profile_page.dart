@@ -592,7 +592,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 controller: descController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: 'Deskripsi singkat',
+                  labelText: 'Bio',
                   border: OutlineInputBorder(),
                 ),
               ),

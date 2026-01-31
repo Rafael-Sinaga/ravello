@@ -72,16 +72,16 @@ class _OrderPageState extends State<OrderPage> {
         ),
         body: TabBarView(
           children: [
-            // Belum Bayar
             _buildUnpaidTab(orders),
+
             // Dikirim
-            _buildEmptyState(
-              message: 'Belum ada pesanan yang sedang dikirim',
-            ),
+            _buildShippedTab(orders),
+
             // Diterima
             _buildEmptyState(
               message: 'Belum ada pesanan yang diterima',
             ),
+
             // Selesai
             _buildOrderList(orders),
           ],
@@ -325,6 +325,150 @@ class _OrderPageState extends State<OrderPage> {
       ],
     );
   }
+
+  Widget _buildShippedTab(List<AppOrder> orders) {
+  final shipped =
+      orders.where((o) => o.status == OrderStatus.dikirim).toList();
+
+  if (shipped.isEmpty) {
+    return _buildEmptyState(
+      message: 'Belum ada pesanan yang sedang dikirim',
+    );
+  }
+
+  return ListView.builder(
+    padding: const EdgeInsets.all(16),
+    itemCount: shipped.length,
+    itemBuilder: (context, index) {
+      return _buildShippedOrderCard(shipped[index]);
+    },
+  );
+}
+
+Widget _buildShippedOrderCard(AppOrder order) {
+  final item = order.items.first;
+  final storeName = item.product.storeName ?? 'Nama Toko';
+  final totalQty = order.totalQuantity;
+  final totalPrice = order.totalPrice;
+
+  // estimasi tiba (dummy)
+  final eta = order.createdAt.add(const Duration(days: 2));
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.grey.withOpacity(0.16)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ===== HEADER =====
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.storefront_rounded,
+                    size: 18, color: primaryColor),
+                const SizedBox(width: 6),
+                Text(
+                  storeName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5EDFF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Dikirim',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // ===== PRODUK =====
+        Text(
+          '${item.product.name} x$totalQty',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: primaryColor,
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        // ===== ESTIMASI =====
+        Text(
+          'Estimasi tiba: ${eta.day}/${eta.month}/${eta.year}',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF6F7A74),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+        const Divider(height: 1, color: Color(0xFFE3ECF4)),
+        const SizedBox(height: 8),
+
+        // ===== FOOTER =====
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Metode Pembayaran: ${order.paymentMethod}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF6F7A74),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Total: Rp${totalPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildPaymentConfirmationBar(BuildContext context) {
     return SafeArea(
